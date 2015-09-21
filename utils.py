@@ -3,10 +3,6 @@ import logging
 import glob
 from mpi4py import MPI
 
-# initialize the MPI interface
-COMM = MPI.COMM_WORLD
-SIZE = COMM.Get_size()
-RANK = COMM.Get_rank()
 
 #pc = h.ParallelContext()
 #h('objref pc')
@@ -18,19 +14,55 @@ RANK = COMM.Get_rank()
 #h('time_start=pc.time()')
 #PROJECTROOT=os.getcwd()
 
+#from neuronpy.nrnobjects import cell
+#print dir(cell.Cell.soma)
 class Utils(HocUtils):
+
+#class Utils(HocUtils):
     _log = logging.getLogger(__name__)
     
     def __init__(self, description):
+      
         super(Utils, self).__init__(description)
         self.stim = None
         self.stim_curr = None
         self.sampling_rate = None
         self.cells = []
-        self.RANK=0
-        self.NCELL=0
-        self.SIZE=0
-    
+        self.gidlist=[]
+        #self.RANK=0
+        #self.NCELL=0
+        #self.SIZE=0
+        # initialize the MPI interface
+        self.celldict={}
+        self.COMM = MPI.COMM_WORLD
+        self.SIZE = self.COMM.Get_size()
+        self.RANK = self.COMM.Get_rank()
+        self.allsecs=None #global list containing all NEURON sections, initialized via mkallsecs
+        self.coordict=None
+
+        
+    def __del__(self):
+        """
+        AUTHORS:
+        - THOMAS MCTAVISH (2010-11-04): initial version. Modified version of the
+                project by Hines and Carnevale. (Hines M.L. and Carnevale N.T, 
+                Translating network models to parallel hardware in NEURON,
+                Journal of Neuroscience Methods 169 (2008) 425-455).
+        In the case of multiple runs where NEURON is not quit and reloaded,
+        we need to clear NEURON so that we can run a new network.
+        There is a particular order that things need to be deleted:
+        1) Any recording vectors
+        2) pc.gid_clear(0)
+        3) Destroy NetCons
+        4) Destroy Cells
+        """
+        self.t_vec = [] # Must come before gid_clear
+        self.id_vec = [] # Must come before gid_clear
+        self.pc.gid_clear(0)
+        self.nclist = []  # Synaptic NetCon list on this host
+        self.stim = None
+        self.cells = []          # Cells on this host
+
 # I do not know how to refer to relative paths in Python,
 # the below emulates a call to a relative path.
 
@@ -50,6 +82,12 @@ class Utils(HocUtils):
 
 
     def gcs(self,NCELL):
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        RANK=self.RANK
+        h=self.h    
+        pc=h.ParallelContext()
+
         swcdict={}
         NFILE = 3175
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
@@ -63,20 +101,19 @@ class Utils(HocUtils):
         # Filter out the bad morphology, using a list comprehension.
         #swclist.remove("Scnn1a-Tg3-Cre_Ai14_IVSCC_-177300.01.02.01_473845048_m.swc")            
         #swclist.remove("466664172.swc") 
-           
+        
+        #range([start], stop[, step])
         gids = [ i for i in range(RANK, NCELL, SIZE) ]
         itergids=iter(gids)
         iterd=iter(d)
-        
         for i in itergids:
         #for i,j in enumerate(d):
-            cell = self.h.cell()
-            #print len(itergids)
-            #print len(iterd)
-            cell.gid=i #itergids.next()
-
-            print cell.gid    
+            cell = self.h.Cell() #use self.h.cell() for allen brain cell.
+            cell.gid1=i #itergids.next()
             self.generate_morphology(cell, d[i][3])#iterd.next())#iterswc.next())
+            self.cells.append(cell)
+            #print dir(cell)
+           
             if 'pyramid' in d[i]:            
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1
@@ -84,10 +121,18 @@ class Utils(HocUtils):
             #inhibitory type stained cell.
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0
-
             
-            self.cells.append(cell)
-        from neuron import h
+            h('objref nc')            
+            h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')
+            self.celldict[i]=cell
+            
+  
+
+           
+
+        print len(h.List('NetCon'))            
+                
+        #from neuron import h
         pol=[ a.polarity for a in self.cells ]       
         import numpy as np
         print np.sum(pol)
@@ -97,190 +142,186 @@ class Utils(HocUtils):
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
         self.h('xopen("seclists.hoc")')
+        print gids
+        print len(gids)      
 
+ # no .clear() command
+        
+    def htype (obj): st=obj.hname(); sv=st.split('['); return sv[0]
+    def secname (obj): obj.push(); print self.h.secname() ; self.h.pop_section()
+    def psection (obj): obj.push(); print self.h.psection() ; self.h.pop_section()
+    
+    # still need to generate a full allsecs
+    def mkallsecs():
+        """ mkallsecs - make the global allsecs variable, containing
+        all the NEURON sections.
+        """
+        #global allsecs
+        allsecs=self.h.SectionList()
+        return allsecs
+    
     
     def wirecells3(self):
     #def wirecells(RANK,NCELL,SIZE,h,icm,ecm):
         from segment_distance import dist3D_segment_to_segment
         import numpy as np
-        icm = np.zeros((self.NCELL, self.NCELL))
-        ecm = np.zeros((self.NCELL, self.NCELL))
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        icm = np.zeros((NCELL, NCELL))
+        ecm = np.zeros((NCELL, NCELL))
+        nclist=[]
         h=self.h    
         pc=h.ParallelContext()
-        #global s,j,i,test,test2,r
         self.s=0
         self.j=0
         self.i=0
         self.gidcompare = ''
-     
         secnames = ''# sec.name()
         cellind =0 #int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
-    
         polarity = 0
-        
-        self.h.py.j=0
-    
+        h('objref coords')
+        h('coords = new Vector(3)')
         for s in xrange(0, SIZE):#Was full SIZE, not SIZE-1
-            if RANK == s:
-    
-                for j in xrange(0,NCELL):
-                    self.py.j=int(j)
-                #print s, j
-                    coordlist = [[0 for x in xrange(0, 2)] for x in xrange(0,
-                             2)]
-    
-                    test = 0
-                    #h('print py.j, py.test')
-                    test=int(pc.gid_exists(j))
-                    print 'test ', test
-                    #h('py.test=py.int(pc.gid_exists(py.int(py.j)))')
-                    if test != 0:
-                        h.source=pc.gid2cell(j)
-                        print h.source
-                        #h('source=pc.gid2cell(py.int(py.j))')
-                        #h('print source')
-                        h.source=h.pc.gid2cell(int(j))
-                        h('print source')
-    
-                        for sec in h.source.spk_trig_ls:
+            #for i,j in self.celldict.iteritems():
+            for j in xrange(0,NCELL):
+                if RANK == s:
+                    #print 'can I use a function decorator for everything inside this part?'
+                    coordict=None
+
+                    if j in self.celldict.keys():
+                        for sec in self.celldict[j].spk_trig_ls.allsec():
+                                   #j.allsec(): 
+                            #print 'not entered 2'                        
+                            #print h.secname()
+                            #print sec.name()
                             for seg in sec:
                                 #print sec, seg
+                                #h.x_xtra(seg.x)
                                 get_cox = str('coords.x[0]=x_xtra('
                                               + str(seg.x) + ')')
-                                h(get_cox)
-    
-    
+                                
                                 get_coy = str('coords.x[1]=y_xtra('
                                               + str(seg.x) + ')')
                                 h(get_coy)
                                 get_coz = str('coords.x[2]=z_xtra('
                                               + str(seg.x) + ')')
                                 h(get_coz)
-                                h.coords.x[3] = int(j)
-                                h.coords.x[4] = seg.x # ie the gidvec
-                                #h('coords.x[4]=py.seg.x')  # ie the gidvec.
-    
-                                coords = np.array(h.coords.to_python(),
+                                coordict={}
+                                
+                                coordict['gid']= int(j)
+                                coordict['seg']= seg.x
+                                
+                                secnames = sec.name()  # h.secnames                            
+                                coordict['secnames'] = str(secnames)
+                                coordict['coords'] = np.array(h.coords.to_python(),
                                                   dtype=np.float64)
-    
-                                coordlist[0][1] = coords
-    
-    
-                                secnames = sec.name()  # h.secnames
-                                coordlist[1][0] = str(secnames)
-    
-    
-                    if test == 0:
-                        coordlist = None
+                                                  
+                                #print coordict            
                 else:
-                    coordlist = None
-                data = COMM.bcast(coordlist, root=s)  # ie root = rank
-    
-                if data != None: 
-                    #pdb.set_trace()
+                    coordict=None
+                data = COMM.bcast(coordict, root=s)  # ie root = rank
+                #print data
+                
+                h('objref coords2')
+                h('coords2 = new Vector(3)')
      
-                    #h.py.i=0
-                    for i in xrange(0, NCELL-1):
-                        h.py.i=i
-                        gidn = int(data[0][1][3])
-                        if i != int(gidn):  # if the gids are not the same
-                            test2 = 0
-                            test2=pc.gid_exists(i)
-                            #h('py.test2=py.int(pc.gid_exists(py.int(py.i)))')
-                            print test2
-                            if test2 != 0:
-                                h.target=pc.gid2cell(i)
-                                print h.target
-                                h('target=pc.gid2cell(py.int(py.i))')
-                                h('print target')
-                                for sec in h.target.spk_rx_ls:
-                                    for seg in sec:
-                                        h(str('coords2.x[2]=') + str('z_xtra(')
-                                          + str(seg.x) + ')')
-                                        h(str('coords2.x[1]=') + str('y_xtra(')
-                                          + str(seg.x) + ')')
-                                        h(str('coords2.x[0]=') + str('x_xtra(')
-                                        + str(seg.x) + ')')
-    
-                                        h('coordsx=0.0')
-                                        h.coordsx = data[0][1][0]
-                                        h('coordsy=0.0')
-                                        h.coordsy = data[0][1][1]
-                                        h('coordsz=0.0')
-                                        h.coordsz = data[0][1][2]
-                          
-                                        coordsx = float(data[0][1][0])
-                                        coordsy = float(data[0][1][1])
-                                        coordsz = float(data[0][1][2])
-                                        r = 0.
-                                        r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
-                                        if front.parent == None or o_front.parent == None:
-                                            D = np.sqrt(np.sum((front.xyz-o_front.xyz)**2))
-                                        else:
-                                            D = dist3D_segment_to_segment (front.xyz,front.parent.xyz,o_front.parent.xyz,o_front.xyz)
-    
-                                        #h('py.r = sqrt((coords2.x[0] - coordsx)^2 + (coords2.x[1] - coordsy)^2 + (coords2.x[2] - coordsz)^2)')
-                                        r = float(r)
-                                        if r < 10:  
-                                            print r, 'this is not hopefuly wiring everything to everything'
-                                            gidcompare = ''
-    
-                                            secnames = sec.name()
-                                            cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
-    
-                                            polarity = 0
-                                       
-    
-                                            #cellind is a cell index, that is relative to the host. So the identifier repeats on different hosts.
-                                            #gidn is a global identifier. These numbers are not repeated on different hosts.
-                                            polarity=int(h.Cell[int(cellind)].polarity)
-                                            
-                                            print polarity
-    
-                                            if int(polarity) == int(1):
-                                                post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
-                                                icm[i][gidn] = icm[i][gidn] + 1
-                                            else:
-    
-                                                post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
-                                                ecm[i][gidn] = ecm[i][gidn] + 1
-    
-                                            h('gidn=0')
-                                            h.gidn = int(data[0][1][3])
-    
-                                            h(post_syn)
-                                            print post_syn
-                                            h('print syn_')
-                                            #h.syn_.cid=i
-                                            h('syn_.cid=py.int(py.i)')  # This makes the gid a property of the synapse.
-                                            h.Cell[cellind].ampalist.append(h.syn_)
-    
-    
-    
-                                            h('synlist.append(syn_)')
-                                            h('gidn=0')
-                                            h.gidn = int(data[0][1][3])
-                                            h.Cell[cellind].div.append(h.gidn)
-                                            h.Cell[cellind].gvpre.append(h.gidn)
-    
-    
-                                            h('nc = pc.gid_connect(gidn, syn_)')
-    
-                 
-    
-                                            h('print nc," ", nc.srcgid()," ", gidn')
-                                            print 'the gids of the connected cells are: ', i, ' ', gidn, '\n'
-    
-    
-                                            h.py.r=r
-                                            h('nc.delay = 1+((py.r)/delay)')
-                                            h('nc.weight = py.r/iw')
-                                            h('nclist.append(nc)')
-    
-    
+                if data != None: 
+                    for i,j in self.celldict.iteritems():
+                    for i in xrange(0,NCELL):
+                            
+            
+                        gidn=data['gid']   
+                        
+                        if i != data['gid']:  # if the gids are not the same
+                            if i in self.celldict.keys():
+        
+                                    for sec in self.celldict[i].spk_rx_ls.allsec():
+                                        for seg in sec:
+                                            h(str('coords2.x[2]=') + str('z_xtra(')
+                                              + str(seg.x) + ')')
+                                            h(str('coords2.x[1]=') + str('y_xtra(')
+                                              + str(seg.x) + ')')
+                                            h(str('coords2.x[0]=') + str('x_xtra(')
+                                            + str(seg.x) + ')')
+        
+                                            h('coordsx=0.0')
+                                            h.coordsx = data['coords'][0]
+                                            h('coordsy=0.0')
+                                            h.coordsy = data['coords'][1]
+                                            h('coordsz=0.0')
+                                            h.coordsz = data['coords'][2]
+                              
+                                            coordsx = float(data['coords'][0])
+                                            coordsy = float(data['coords'][1])
+                                            coordsz = float(data['coords'][2])
+                                            r = 0.
+                                            import math
+                                            r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
+                                            #if front.parent == None or o_front.parent == None:
+                                            #    D = np.sqrt(np.sum((front.xyz-o_front.xyz)**2))
+                                            #else:
+                                            #    D = dist3D_segment_to_segment (front.xyz,front.parent.xyz,o_front.parent.xyz,o_front.xyz)
+        
+                                            #h('py.r = sqrt((coords2.x[0] - coordsx)^2 + (coords2.x[1] - coordsy)^2 + (coords2.x[2] - coordsz)^2)')
+                                            r = float(r)
+                                            if r < 6:  
+                                                print r,# 'this is not hopefuly wiring everything to everything'
+                                                gidcompare = ''
+        
+                                                secnames = sec.name()
+                                                cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
+        
+                                                polarity = 0
+                                           
+        
+                                                #cellind is a cell index, that is relative to the host. So the identifier repeats on different hosts.
+                                                #gidn is a global identifier. These numbers are not repeated on different hosts.
+                                                polarity=int(h.Cell[int(cellind)].polarity)
+                                                
+                                                print polarity
+                                                h('objref syn_')        
+                                                if int(polarity) == int(1):
+                                                    post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
+                                                    icm[i][gidn] = icm[i][gidn] + 1
+                                                else:
+        
+                                                    post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
+                                                    ecm[i][gidn] = ecm[i][gidn] + 1
+        
+                                                #h('gidn=0')
+                                                #h.gidn = int(data[0][1][3])
+        
+                                                h(post_syn)
+                                                print post_syn
+                                                h('print syn_')
+                                                syn_=h.syn_
+                                                #h.syn_.cid=i
+                                                h.syn_.cid=i
+                                                #h('syn_.cid=py.int(py.i)')  # This makes the gid a property of the synapse.
+                                                h.Cell[cellind].ampalist.append(h.syn_)
+                                                #h.synlist.append(h.syn_)
+        
+        
+                                                #h('synlist.append(syn_)')
+                                                #h('gidn=0')
+                                                #h.gidn = int(data[0][1][3])
+                                                h.Cell[cellind].div.append(data['gid'])
+                                                h.Cell[cellind].gvpre.append(data['gid'])
+        
+                                                #print dir(syn_)
+                                                
+                                                #print dir(h.syn_)
+                                                nc=pc.gid_connect(data['gid'],syn_)                                        
+                                                h.nc.delay=1+r/0.4
+                                                h.nc.weight[0]=r/0.4    
+                                                nclist.append(nc)                                            
+                                  
+
         COMM.Barrier()
     
-        return (h.nclist, ecm, icm)
+        return (nclist, ecm, icm)
 
        
 
@@ -417,17 +458,17 @@ class Utils(HocUtils):
         for sec in cell.all:
             sec.nseg = 1 + 2 * int(sec.L / 40)
         
-        cell.simplify_axon()
-        for sec in cell.axonal:
-            sec.L = 30
-            sec.diam = 1
-            sec.nseg = 1 + 2 * int(sec.L / 40)
-        cell.axon[0].connect(cell.soma[0], 0.5, 0)
-        cell.axon[1].connect(cell.axon[0], 1, 0)
+        #cell.simplify_axon()
+        #for sec in cell.axonal:
+        #    sec.L = 30
+        #    sec.diam = 1
+        #    sec.nseg = 1 + 2 * int(sec.L / 40)
+        #cell.axon[0].connect(cell.soma[0], 0.5, 0)
+        #cell.axon[1].connect(cell.axon[0], 1, 0)
         h.define_shape()
     
     def load_cell_parameters(self, cell, type_index):
-        from neuron import h
+        h=self.h
         passive = self.description.data['fit'][type_index]['passive'][0]
         conditions = self.description.data['fit'][type_index]['conditions'][0]
         genome = self.description.data['fit'][type_index]['genome']
