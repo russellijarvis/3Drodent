@@ -50,7 +50,28 @@ from allensdk.model.biophys_sim.config import Config
 from utils import Utils
 config = Config().load('config.json')
 utils = Utils(config)
-utils.NCELL=18
+NCELL=utils.NCELL=18
+import brain_functions as bf
+from neuron import h
+def prep_list(NFILE):
+    cnt = 0
+    allrows2 = []
+    i = 0
+    for i in xrange(0, NFILE - 1):
+        s = allrows[i]
+        if cnt > 1:
+            if int(len(s)) > 9:  # //This condition is counter intuitive many cells
+                storename = str(s[3])  # //simply being inside a loop, may be the main pro
+
+                allrows2.append(allrows[i])
+        cnt += 1
+    return allrows2
+    print np.shape(allrows2), np.shape(allrows)
+allrows2 = prep_list(NFILE)
+gidvec = []
+s1=''
+
+h.cells, allrows2, ie0, ie1 =bf.mb(RANK, NCELL, SIZE, allrows2, gidvec,h,s1)
 
 info_swc=utils.gcs(utils.NCELL)
 utils.h.nclist, ecm, icm=utils.wirecells3()

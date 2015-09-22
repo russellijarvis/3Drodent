@@ -396,7 +396,7 @@ class Utils(HocUtils):
                                                                                 
                                     if i in self.celldict.keys():
                 
-                                            for sec in self.celldict[i].spk_rx_ls.allsec():
+                                        for sec in self.celldict[i].spk_rx_ls.allsec():
                                             #for sec in j.spk_rx_ls.allsec():
                                             for seg in sec:
                                                     
