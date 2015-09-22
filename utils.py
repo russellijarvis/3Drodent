@@ -159,6 +159,149 @@ class Utils(HocUtils):
         #global allsecs
         allsecs=self.h.SectionList()
         return allsecs
+
+    def matrix_reduce(self,ecm,icm):       
+        import numpy as np
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        icm = np.zeros((NCELL, NCELL))
+        ecm = np.zeros((NCELL, NCELL))
+        COMM.Barrier()
+        my_icm = np.zeros_like(icm)
+        COMM.Reduce([icm, MPI.DOUBLE], [my_icm, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+        my_ecm = np.zeros_like(ecm)
+        COMM.Reduce([ecm, MPI.DOUBLE], [my_ecm, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+        return ecm, icm
+        
+    def innerloop(self,i,data,ecm, icm):
+        h=self.h    
+        pc=h.ParallelContext()
+        RANK=self.RANK
+
+        secnames = ''# sec.name()
+        cellind =0 #int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
+        polarity = 0
+        h('objref coords')
+        h('coords = new Vector(3)')
+        cnt=0
+        if i in self.celldict.keys():
+
+            for sec in self.celldict[i].spk_rx_ls.allsec():
+            #for sec in j.spk_rx_ls.allsec():
+                for seg in sec:
+                    print seg.x, sec.name(), RANK, data['hostfrom'] 
+
+                    #print sec.name()
+                    h(str('coords2.x[2]=') + str('z_xtra(')
+                      + str(seg.x) + ')')
+                    h(str('coords2.x[1]=') + str('y_xtra(')
+                      + str(seg.x) + ')')
+                    h(str('coords2.x[0]=') + str('x_xtra(')
+                    + str(seg.x) + ')')
+    
+                    h('coordsx=0.0')
+                    h.coordsx = data['coords'][0]
+                    h('coordsy=0.0')
+                    h.coordsy = data['coords'][1]
+                    h('coordsz=0.0')
+                    h.coordsz = data['coords'][2]
+      
+                    coordsx = float(data['coords'][0])
+                    coordsy = float(data['coords'][1])
+                    coordsz = float(data['coords'][2])
+                    r = 0.
+                    import math
+                    r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
+                    gidn=data['gid']    
+                    #if front.parent == None or o_front.parent == None:
+                    #    D = np.sqrt(np.sum((front.xyz-o_front.xyz)**2))
+                    #else:
+                    #    D = dist3D_segment_to_segment (front.xyz,front.parent.xyz,o_front.parent.xyz,o_front.xyz)
+    
+                    #h('py.r = sqrt((coords2.x[0] - coordsx)^2 + (coords2.x[1] - coordsy)^2 + (coords2.x[2] - coordsz)^2)')
+                    r = float(r)
+                    if r < 1:  
+                        print r,# 'this is not hopefuly wiring everything to everything'
+                        gidcompare = ''
+    
+                        secnames = sec.name()
+                        cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
+    
+                        polarity = 0
+                   
+    
+                        #cellind is a cell index, that is relative to the host. So the identifier repeats on different hosts.
+                        #gidn is a global identifier. These numbers are not repeated on different hosts.
+                        polarity=int(h.Cell[int(cellind)].polarity)
+                        
+                        print polarity
+                        h('objref syn_')        
+                        if int(polarity) == int(0):
+                            post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
+                            icm[i][gidn] = icm[i][gidn] + 1
+                        else:
+    
+                            post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
+                            ecm[i][gidn] = ecm[i][gidn] + 1
+    
+                        h(post_syn)
+                        print post_syn
+                        h('print syn_')
+                        syn_=h.syn_
+                        h.syn_.cid=i
+                        h.Cell[cellind].ampalist.append(h.syn_)
+                        h.Cell[cellind].div.append(data['gid'])
+                        h.Cell[cellind].gvpre.append(data['gid'])
+                        nc=pc.gid_connect(data['gid'],syn_)                                        
+                        h.nc.delay=1+r/0.4
+                        h.nc.weight[0]=r/0.4    
+                        self.nclist.append(nc)                                            
+
+        
+        
+        
+        
+        return self.nclist, ecm, icm
+    
+    def inner1(self,j):
+        h=self.h    
+        import numpy as np
+
+        coordict=None
+        if j in self.celldict.keys():
+            for i,sec in enumerate(self.celldict[j].spk_trig_ls.allsec()):
+                for j,seg in enumerate(sec):        
+                    get_cox = str('coords.x[0]=x_xtra('
+                                  + str(seg.x) + ')')
+                    
+                    get_coy = str('coords.x[1]=y_xtra('
+                                  + str(seg.x) + ')')
+                    h(get_coy)
+                    get_coz = str('coords.x[2]=z_xtra('
+                                  + str(seg.x) + ')')
+                    h(get_coz)
+                    coordict={}
+                    
+                    coordict['gid']= int(j)
+                    coordict['seg']= seg.x
+                    
+                    secnames = sec.name()  # h.secnames                            
+                    coordict['secnames'] = str(secnames)
+                    coordict['coords'] = np.array(h.coords.to_python(),
+                                      dtype=np.float64)
+                    print i,j, ' i,j', seg.x, sec.name()
+                                                      
+        return coordict
+        #props = set(k for u in users for k in u.properties().keys() ) #Evaluated from right to left.
+        
+        #for sec in itersec:
+                #while itersec.next()==True:   
+                    
+
     
     
     def wirecells3(self):
@@ -171,161 +314,165 @@ class Utils(HocUtils):
         RANK=self.RANK
         icm = np.zeros((NCELL, NCELL))
         ecm = np.zeros((NCELL, NCELL))
-        nclist=[]
+        self.nclist=[]
         h=self.h    
         pc=h.ParallelContext()
-        self.s=0
-        self.j=0
-        self.i=0
-        self.gidcompare = ''
+        #self.s=0
+        #self.j=0
+        #self.i=0
+        #self.gidcompare = ''
         secnames = ''# sec.name()
         cellind =0 #int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
         polarity = 0
         h('objref coords')
         h('coords = new Vector(3)')
-        for s in xrange(0, SIZE):#Was full SIZE, not SIZE-1
+        cnt=0
+        
+        #for s in xrange(0, SIZE):#Was full SIZE, not SIZE-1
             #for i,j in self.celldict.iteritems():
-            for j in xrange(0,NCELL):
-                if RANK == s:
-                    #print 'can I use a function decorator for everything inside this part?'
-                    coordict=None
-
-                    if j in self.celldict.keys():
-                        for sec in self.celldict[j].spk_trig_ls.allsec():
-                                   #j.allsec(): 
-                            #print 'not entered 2'                        
-                            #print h.secname()
-                            #print sec.name()
-                            for seg in sec:
-                                #print sec, seg
-                                #h.x_xtra(seg.x)
-                                get_cox = str('coords.x[0]=x_xtra('
-                                              + str(seg.x) + ')')
-                                
-                                get_coy = str('coords.x[1]=y_xtra('
-                                              + str(seg.x) + ')')
-                                h(get_coy)
-                                get_coz = str('coords.x[2]=z_xtra('
-                                              + str(seg.x) + ')')
-                                h(get_coz)
-                                coordict={}
-                                
-                                coordict['gid']= int(j)
-                                coordict['seg']= seg.x
-                                
-                                secnames = sec.name()  # h.secnames                            
-                                coordict['secnames'] = str(secnames)
-                                coordict['coords'] = np.array(h.coords.to_python(),
-                                                  dtype=np.float64)
-                                                  
-                                #print coordict            
-                else:
-                    coordict=None
-                data = COMM.bcast(coordict, root=s)  # ie root = rank
-                #print data
                 
-                h('objref coords2')
-                h('coords2 = new Vector(3)')
-     
-                if data != None: 
-                    for i,j in self.celldict.iteritems():
-                    for i in xrange(0,NCELL):
-                            
-            
-                        gidn=data['gid']   
+        for j in xrange(0,NCELL):
+            #if RANK == s:
+
+            #print 'can I use a function decorator for everything inside this part?'
+                
+            #coordict=self.inner1(j)
+                                
+            coordict=None
+            #coordictlist=None
+            if j in self.celldict.keys():
+                #for sec in j.spk_trig_ls.allsec():
+                 
+                for sec in self.celldict[j].spk_trig_ls.allsec():
+                    for seg in sec:
+                #for i,sec in enumerate(self.celldict[j].spk_trig_ls.allsec()):
+                #    for j,seg in enumerate(sec):        
+                        get_cox = str('coords.x[0]=x_xtra('
+                                      + str(seg.x) + ')')
                         
-                        if i != data['gid']:  # if the gids are not the same
-                            if i in self.celldict.keys():
-        
-                                    for sec in self.celldict[i].spk_rx_ls.allsec():
-                                        for seg in sec:
-                                            h(str('coords2.x[2]=') + str('z_xtra(')
-                                              + str(seg.x) + ')')
-                                            h(str('coords2.x[1]=') + str('y_xtra(')
-                                              + str(seg.x) + ')')
-                                            h(str('coords2.x[0]=') + str('x_xtra(')
-                                            + str(seg.x) + ')')
-        
-                                            h('coordsx=0.0')
-                                            h.coordsx = data['coords'][0]
-                                            h('coordsy=0.0')
-                                            h.coordsy = data['coords'][1]
-                                            h('coordsz=0.0')
-                                            h.coordsz = data['coords'][2]
-                              
-                                            coordsx = float(data['coords'][0])
-                                            coordsy = float(data['coords'][1])
-                                            coordsz = float(data['coords'][2])
-                                            r = 0.
-                                            import math
-                                            r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
-                                            #if front.parent == None or o_front.parent == None:
-                                            #    D = np.sqrt(np.sum((front.xyz-o_front.xyz)**2))
-                                            #else:
-                                            #    D = dist3D_segment_to_segment (front.xyz,front.parent.xyz,o_front.parent.xyz,o_front.xyz)
-        
-                                            #h('py.r = sqrt((coords2.x[0] - coordsx)^2 + (coords2.x[1] - coordsy)^2 + (coords2.x[2] - coordsz)^2)')
-                                            r = float(r)
-                                            if r < 6:  
-                                                print r,# 'this is not hopefuly wiring everything to everything'
-                                                gidcompare = ''
-        
-                                                secnames = sec.name()
-                                                cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
-        
-                                                polarity = 0
-                                           
-        
-                                                #cellind is a cell index, that is relative to the host. So the identifier repeats on different hosts.
-                                                #gidn is a global identifier. These numbers are not repeated on different hosts.
-                                                polarity=int(h.Cell[int(cellind)].polarity)
-                                                
-                                                print polarity
-                                                h('objref syn_')        
-                                                if int(polarity) == int(1):
-                                                    post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
-                                                    icm[i][gidn] = icm[i][gidn] + 1
-                                                else:
-        
-                                                    post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
-                                                    ecm[i][gidn] = ecm[i][gidn] + 1
-        
-                                                #h('gidn=0')
-                                                #h.gidn = int(data[0][1][3])
-        
-                                                h(post_syn)
-                                                print post_syn
-                                                h('print syn_')
-                                                syn_=h.syn_
-                                                #h.syn_.cid=i
-                                                h.syn_.cid=i
-                                                #h('syn_.cid=py.int(py.i)')  # This makes the gid a property of the synapse.
-                                                h.Cell[cellind].ampalist.append(h.syn_)
-                                                #h.synlist.append(h.syn_)
-        
-        
-                                                #h('synlist.append(syn_)')
-                                                #h('gidn=0')
-                                                #h.gidn = int(data[0][1][3])
-                                                h.Cell[cellind].div.append(data['gid'])
-                                                h.Cell[cellind].gvpre.append(data['gid'])
-        
-                                                #print dir(syn_)
-                                                
-                                                #print dir(h.syn_)
-                                                nc=pc.gid_connect(data['gid'],syn_)                                        
-                                                h.nc.delay=1+r/0.4
-                                                h.nc.weight[0]=r/0.4    
-                                                nclist.append(nc)                                            
-                                  
+                        get_coy = str('coords.x[1]=y_xtra('
+                                      + str(seg.x) + ')')
+                        h(get_coy)
+                        get_coz = str('coords.x[2]=z_xtra('
+                                      + str(seg.x) + ')')
+                        h(get_coz)
+                        coordictlist=[]
+                        coordict={}
+                        
+                        coordict['gid']= int(j)
+                        coordict['seg']= seg.x
+                        
+                        secnames = sec.name()  # h.secnames                            
+                        coordict['secnames'] = str(secnames)
+                        coordict['coords'] = np.array(h.coords.to_python(),
+                                          dtype=np.float64)
+                        coordict['hostfrom']=RANK                  
+                        #print i,j, ' i,j', seg.x, sec.name(), RANK
+                                            
+                        #coordictlist.append(coordict)                  
+                        #print coordict
+            
+        #else:
+        #    coordict=None
+                        data = COMM.bcast(coordict, root=RANK)  # ie root = rank
+                        #print data
+                        
+                        h('objref coords2') 
+                        h('coords2 = new Vector(3)')
+             
+                        if data != None:
+                            #cnt+=1
+                            #print data, cnt
+                            
+                            #for i,j in self.celldict.iteritems():
+                            for i in xrange(0,NCELL):
+                                    
+                                #for i,data in enumerate(data1):    
+                                #    print i, data
+                                #    gidn=data['gid']   
+                                    
+                                if i != data['gid']:  # if the gids are not the same
+                                    #self.nclist, ecm, icm = self.innerloop(i,data,ecm, icm)
+                                                                                
+                                    if i in self.celldict.keys():
+                
+                                            for sec in self.celldict[i].spk_rx_ls.allsec():
+                                            #for sec in j.spk_rx_ls.allsec():
+                                            for seg in sec:
+                                                    
+                                                    h(str('coords2.x[2]=') + str('z_xtra(')
+                                                      + str(seg.x) + ')')
+                                                    h(str('coords2.x[1]=') + str('y_xtra(')
+                                                      + str(seg.x) + ')')
+                                                    h(str('coords2.x[0]=') + str('x_xtra(')
+                                                    + str(seg.x) + ')')
+                
+                                                    h('coordsx=0.0')
+                                                    h.coordsx = data['coords'][0]
+                                                    h('coordsy=0.0')
+                                                    h.coordsy = data['coords'][1]
+                                                    h('coordsz=0.0')
+                                                    h.coordsz = data['coords'][2]
+                                      
+                                                    coordsx = float(data['coords'][0])
+                                                    coordsy = float(data['coords'][1])
+                                                    coordsz = float(data['coords'][2])
+                                                    r = 0.
+                                                    import math
+                                                    r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
+                                                    gidn=data['gid']    
+                                                    #if front.parent == None or o_front.parent == None:
+                                                    #    D = np.sqrt(np.sum((front.xyz-o_front.xyz)**2))
+                                                    #else:
+                                                    #    D = dist3D_segment_to_segment (front.xyz,front.parent.xyz,o_front.parent.xyz,o_front.xyz)
+                
+                                                    #h('py.r = sqrt((coords2.x[0] - coordsx)^2 + (coords2.x[1] - coordsy)^2 + (coords2.x[2] - coordsz)^2)')
+                                                    r = float(r)
+                                                    if r < 4:  
 
-        COMM.Barrier()
-    
-        return (nclist, ecm, icm)
+                                                        print r,# 'this is not hopefuly wiring everything to everything'
+                                                        gidcompare = ''
+                
+                                                        secnames = sec.name()
+                                                        cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
+                
+                                                        polarity = 0
+                                                   
+                
+                                                        #cellind is a cell index, that is relative to the host. So the identifier repeats on different hosts.
+                                                        #gidn is a global identifier. These numbers are not repeated on different hosts.
+                                                        polarity=int(h.Cell[int(cellind)].polarity)
+                                                        print seg.x, data['seg'], data['secnames'], sec.name(), RANK, data['hostfrom'], data['gid'], h.Cell[int(cellind)].gid1
+                                                        
+                                                        print polarity
+                                                        h('objref syn_')        
+                                                        if int(polarity) == int(0):
+                                                            post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
+                                                            icm[i][gidn] = icm[i][gidn] + 1
+                                                        else:
+                
+                                                            post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
+                                                            ecm[i][gidn] = ecm[i][gidn] + 1
+                
+                                                        h(post_syn)
+                                                        print post_syn
+                                                        h('print syn_')
+                                                        syn_=h.syn_
+                                                        h.syn_.cid=i
+                                                        h.Cell[cellind].ampalist.append(h.syn_)
+                                                        h.Cell[cellind].div.append(data['gid'])
+                                                        h.Cell[cellind].gvpre.append(data['gid'])
+                                                        nc=pc.gid_connect(data['gid'],syn_)                                        
+                                                        h.nc.delay=1+r/0.4
+                                                        h.nc.weight[0]=r/0.4    
+                                                        self.nclist.append(nc)
+                                                        #break 
+                                                #data=None
+                        data=None                        
+        ecm,icm = self.matrix_reduce(ecm,icm)
+        return (self.nclist, ecm, icm)
 
-       
 
- 
     
     def mb(RANK, NCELL, SIZE, allrows2, gidvec, h,s1):
         #make soff and boff optional parameters in python function.
