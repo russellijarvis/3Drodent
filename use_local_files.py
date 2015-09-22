@@ -43,17 +43,26 @@ information=read_local_json()
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
 
 
-NCELL=185     
+NCELL=18    
 import glob
 from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
 from utils import Utils
 config = Config().load('config.json')
 utils = Utils(config)
-utils.NCELL=18
+utils.NCELL=10
 
 info_swc=utils.gcs(utils.NCELL)
-utils.h.nclist, ecm, icm=utils.wirecells3()
+#utils.seclists()
+nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
+nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
+
+import numpy as np
+print 'sums of ecm and icm'
+print np.sum(ecm), np.sum(icm)
+print SIZE, RANK
+import mpi4py as mpi4py
+mpi4py.get_config(), 'config'
 pc = utils.h.ParallelContext()
 s = "mpi4py thinks I am %d of %d,\
 # NEURON thinks I am %d of %d\n"
