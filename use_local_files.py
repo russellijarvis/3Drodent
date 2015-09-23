@@ -43,38 +43,50 @@ information=read_local_json()
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
 
 
-NCELL=185     
+NCELL=18    
 import glob
 from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
-from utils import Utils
-config = Config().load('config.json')
-utils = Utils(config)
+
+
 NCELL=utils.NCELL=18
 import brain_functions as bf
 from neuron import h
-def prep_list(NFILE):
-    cnt = 0
-    allrows2 = []
-    i = 0
-    for i in xrange(0, NFILE - 1):
-        s = allrows[i]
-        if cnt > 1:
-            if int(len(s)) > 9:  # //This condition is counter intuitive many cells
-                storename = str(s[3])  # //simply being inside a loop, may be the main pro
 
-                allrows2.append(allrows[i])
-        cnt += 1
-    return allrows2
-    print np.shape(allrows2), np.shape(allrows)
-allrows2 = prep_list(NFILE)
+h('objref py, pc')
+h('py = new PythonObject()')
+h('pc = new ParallelContext()')
+def prep_list():                
+    import pickle
+    allrows = pickle.load(open('allrows.p', 'rb'))
+    allrows.remove(allrows[0])#The first list element are the column titles. 
+    allrows2 = [i for i in allrows if int(len(i))>9 ]
+    return allrows2 
+
+
+allrows2 = prep_list()#NFILE)
 gidvec = []
 s1=''
 
-h.cells, allrows2, ie0, ie1 =bf.mb(RANK, NCELL, SIZE, allrows2, gidvec,h,s1)
+os.chdir(os.getcwd() + '/main')        
 
-info_swc=utils.gcs(utils.NCELL)
-utils.h.nclist, ecm, icm=utils.wirecells3()
+h.cells, allrows2, ie0, ie1 =bf.mb(RANK, NCELL, SIZE, allrows2, gidvec,h,s1)
+utils.NCELL=10
+
+#info_swc=utils.gcs(utils.NCELL)
+#utils.seclists()
+from utils import Utils
+config = Config().load('config.json')
+utils = Utils(config)
+nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
+nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
+
+import numpy as np
+print 'sums of ecm and icm'
+print np.sum(ecm), np.sum(icm)
+print SIZE, RANK
+import mpi4py as mpi4py
+mpi4py.get_config(), 'config'
 pc = utils.h.ParallelContext()
 s = "mpi4py thinks I am %d of %d,\
 # NEURON thinks I am %d of %d\n"
