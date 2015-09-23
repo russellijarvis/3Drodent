@@ -507,6 +507,12 @@ ecm = np.zeros((NCELL, NCELL))
 #NCELL=boff
 
 from utils import Utils
+import glob
+from allensdk.model.biophysical_perisomatic.utils import Utils
+from allensdk.model.biophys_sim.config import Config
+
+config = Config().load('config.json')
+utils = Utils(config)
 nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
 nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
 
