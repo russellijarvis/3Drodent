@@ -333,7 +333,7 @@ for (i, row) in enumerate(allrows2):
 os.chdir(PROJECTROOT)
 #execfile('brain_functions.py')
 
-def mb(RANK, NCELL, SIZE, allrows2, gidvec, h,soff,boff):
+def mb(RANK, NCELL, SIZE, allrows2, gidvec, h):
 #make soff and boff optional parameters in python function.
 
     #h('objref py')
@@ -343,8 +343,8 @@ def mb(RANK, NCELL, SIZE, allrows2, gidvec, h,soff,boff):
     cnti = 0
     cnt=0
     s=''
-    storename=''
-    for i in range(RANK+soff, boff,SIZE):#NCELL-1, SIZE):  # 20 was int(len
+    storename=''#f
+    for i in range(RANK,NCELL, SIZE):  # 20 was int(len
     
         s = allrows2[i]
         storename = str(s[3])  # //simply being inside a loop, may be the main problem
@@ -497,8 +497,8 @@ h('strdef tail_target')
 h('objref source, target')
 
 
-icm = np.zeros((NCELL, NCELL))
-ecm = np.zeros((NCELL, NCELL))
+#icm = np.zeros((NCELL, NCELL))
+#ecm = np.zeros((NCELL, NCELL))
 
 
 
@@ -508,12 +508,28 @@ ecm = np.zeros((NCELL, NCELL))
 
 from utils import Utils
 import glob
-from allensdk.model.biophysical_perisomatic.utils import Utils
-from allensdk.model.biophys_sim.config import Config
+#from allensdk.model.biophysical_perisomatic.utils import Utils
 
+from allensdk.model.biophys_sim.config import Config
+from utils import Utils
 config = Config().load('config.json')
 utils = Utils(config)
-nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
+print dir(utils)
+utils.NCELL=NCELL
+
+for i in range(RANK, NCELL,SIZE):
+    test=int(pc.gid_exists(int(i)))
+    if int(pc.gid_exists(int(i)))!=0:    
+        print i, 'gid'                
+        utils.celldict[i]=pc.gid2cell(int(i))
+        cell=utils.celldict[i]
+        print cell.gid1, i, 'gids consistant?'
+        #for sec in utils.celldict[i].allsec():
+        #    print sec.name()
+print 'loop succeeded'   
+print dir(utils)
+         
+#nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
 nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
 
 #h.nclist,ecm,icm=bf.wirecells3(RANK,NCELL,SIZE,h,icm,ecm)

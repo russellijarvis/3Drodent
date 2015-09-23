@@ -49,13 +49,15 @@ from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
 
 
-NCELL=utils.NCELL=18
 import brain_functions as bf
 from neuron import h
 
 h('objref py, pc')
 h('py = new PythonObject()')
 h('pc = new ParallelContext()')
+
+
+
 def prep_list():                
     import pickle
     allrows = pickle.load(open('allrows.p', 'rb'))
@@ -71,14 +73,19 @@ s1=''
 os.chdir(os.getcwd() + '/main')        
 
 h.cells, allrows2, ie0, ie1 =bf.mb(RANK, NCELL, SIZE, allrows2, gidvec,h,s1)
-utils.NCELL=10
 
 #info_swc=utils.gcs(utils.NCELL)
 #utils.seclists()
 from utils import Utils
+
 config = Config().load('config.json')
 utils = Utils(config)
-nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
+NCELL=utils.NCELL=18
+
+for i in 
+utils.celldict
+
+#nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
 nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
 
 import numpy as np
