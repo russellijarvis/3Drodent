@@ -112,25 +112,16 @@ class Utils(HocUtils):
         self.cells_data = self.description.data['biophys'][0]['cells']
         info_swc=self.prep_list()
         d = { x: y for x,y in enumerate(info_swc)}
-        #d = {a[3]: a for a in info_swc}
         import os
-        os.chdir(os.getcwd() + '/main')        
-        #swclist=glob.glob('*.swc')
-        # Filter out the bad morphology, using a list comprehension.
-        #swclist.remove("Scnn1a-Tg3-Cre_Ai14_IVSCC_-177300.01.02.01_473845048_m.swc")            
-        #swclist.remove("466664172.swc") 
-        
-        #range([start], stop[, step])
+        os.chdir(os.getcwd() + '/main')   
         gids = [ i for i in range(RANK, NCELL, SIZE) ]
         itergids=iter(gids)
         iterd=iter(d)
         for i in itergids:
-        #for i,j in enumerate(d):
             cell = self.h.Cell() #use self.h.cell() for allen brain cell.
             cell.gid1=i #itergids.next()
             self.generate_morphology(cell, d[i][3])#iterd.next())#iterswc.next())
             self.cells.append(cell)
-            #print dir(cell)
            
             if 'pyramid' in d[i]:            
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
@@ -142,11 +133,7 @@ class Utils(HocUtils):
             
             h('objref nc')            
             h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
-            #h.cell=cell            
-            h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host
-
-            #h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
-            
+            h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
             h('pc.cell('+str(i)+', nc)') 
             self.celldict[i]=cell
             
@@ -156,7 +143,6 @@ class Utils(HocUtils):
 
         print len(h.List('NetCon'))            
                 
-        #from neuron import h
         pol=[ a.polarity for a in self.cells ]       
         import numpy as np
         print np.sum(pol)
@@ -348,7 +334,7 @@ class Utils(HocUtils):
                         cell1=pc.gid2cell(i)
                         print t.gid1, cell1.gid1, 'gids consistant? in wiring?'
 
-                        for sec in l.spk_trig_ls.allsec(): #pre synapses
+                        for sec in l.spk_trig_ls: #pre synapses
                             for seg in sec:
                         #for i,sec in enumerate(self.celldict[j].spk_trig_ls.allsec()):
                         #    for j,seg in enumerate(sec):
@@ -387,7 +373,7 @@ class Utils(HocUtils):
                                                     
                                 #coordictlist.append(coordict)    
             
-                                for sec in t.spk_rx_ls.allsec():#post synapses.
+                                for sec in t.spk_rx_ls:#post synapses.
          
                                     #print (int(t.gid1) != int(coordict['gid'])), int(t.gid1),  int(coordict['gid'])
                                     #h('objref cell1')
@@ -474,7 +460,15 @@ class Utils(HocUtils):
                                             h.Cell[cellind].ampalist.append(h.syn_)
                                             h.Cell[cellind].div.append(coordict['gid'])
                                             h.Cell[cellind].gvpre.append(coordict['gid'])
-                                            nc=pc.gid_connect(i,syn_)                                        
+                                            #nc=pc.gid_connect(i,syn_)                             
+                                            
+                                            h('objref nc')            
+                                            #target
+                                            ls=str(coordict['secnames'])+' nc =  new NetCon(&v('+str(coordict['seg'])+'),'+str(sec.name())
+                                            
+                                            print ls 
+                                            h(ls)
+                                            nc=h.nc                                                    
                                             #print i, coordict['gid'], coordict['gid']==i, 'gid system consistant?'
                                             print t.gid1, cell1.gid1, 'gids consistant? in wiring?'
                                             print 'pre gids consistant?'
@@ -503,6 +497,52 @@ class Utils(HocUtils):
                  
         
     
+    def prun(self,tstop):
+        #This code is from:
+        #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
+        cvode = h.CVode()
+        cvode.cache_efficient(1)
+    
+      # pc.spike_compress(0,0,1)
+    
+        pc.setup_transfer()
+        mindelay = pc.set_maxstep(10)
+        if RANK == 0:
+            print 'mindelay = %g' % mindelay
+        runtime = h.startsw()
+        exchtime = pc.wait_time()
+    
+        inittime = h.startsw()
+        h.stdinit()
+        inittime = h.startsw() - inittime
+        if RANK == 0:
+            print 'init time = %g' % inittime
+    
+        while h.t < tstop:
+            told = h.t
+            tnext = h.t + checkpoint_interval
+            if tnext > tstop:
+                tnext = tstop
+            pc.psolve(tnext)
+            if h.t == told:
+                if RANK == 0:
+                    print 'psolve did not advance time from t=%.20g to tnext=%.20g\n' \
+                        % (h.t, tnext)
+                break
+    
+        # if h.t%2==0: The problem is h.t is float multiple not integer multiple
+    
+            print 'working', h.t
+        runtime = h.startsw() - runtime
+        comptime = pc.step_time()
+        splittime = pc.vtransfer_time(1)
+        gaptime = pc.vtransfer_time()
+        exchtime = pc.wait_time() - exchtime
+        if RANK == 0:
+            print 'runtime = %g' % runtime
+        print comptime, exchtime, splittime, gaptime
+
+    
     
     def wirecells3(self):        
         '''wire cells between hosts, but don't wire cells on the same host.'''
@@ -518,10 +558,6 @@ class Utils(HocUtils):
         self.nclist=[]
         h=self.h    
         pc=h.ParallelContext()
-        #self.s=0
-        #self.j=0
-        #self.i=0
-        #self.gidcompare = ''
         secnames = ''# sec.name()
         cellind =0 #int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
         polarity = 0
@@ -531,26 +567,17 @@ class Utils(HocUtils):
         h('pc = new ParallelContext()')
         cnt=0
         
-        #for s in xrange(0, SIZE):#Was full SIZE, not SIZE-1
-            #for i,j in self.celldict.iteritems():
  
         coordict=None
         coordictlist=None
         for s in xrange(0, SIZE):#Was full SIZE, not SIZE-1
             
     
-            #for j in xrange(0,NCELL):
             for j,l in self.celldict.iteritems():
-                #print j, ' gid number', l, s, 'host name \n', len(coordict) 
-                #if RANK == s:
-    
-                #print 'can I use a function decorator for everything inside this part?'
                     
                 #coordict=self.inner1(j)
                                     
                 if pc.gid_exists(j):                    
-                #if j in self.celldict.keys():
-                    #for sec in j.spk_trig_ls.allsec():
                     coordictlist=[]         
                     for sec in self.celldict[j].spk_trig_ls:
                         for seg in sec:
@@ -590,7 +617,11 @@ class Utils(HocUtils):
                             #print i,j, ' i,j', seg.x, sec.name(), RANK
                                                 
                             coordictlist.append(coordict)                  
-                      
+                    # The only point of these mechanisms, is to get accurate coordinates
+                    # once this has been achieved they can be uninserted from the spike trigger list.
+                    h('uninsert xtra')
+                    h('uninsert extracellular')
+  
                     data = COMM.bcast(coordictlist, root=s)  # ie root = rank
                     #print data
                     #print len(data), 'length of dictlist'
@@ -713,8 +744,11 @@ class Utils(HocUtils):
                                                         h.nc.delay=1+r/0.4
                                                         h.nc.weight[0]=r/0.4    
                                                         self.nclist.append(nc)
-                                                                #break 
-                                                        #data=None
+                                                     
+                                            # The only point of these mechanisms, is to get accurate coordinates
+                                            # once this has been achieved they can be uninserted from the spike trigger list.
+              
+                                                        
             data=None                        
         ecm,icm = self.matrix_reduce(ecm,icm)
         return (self.nclist, ecm, icm)
