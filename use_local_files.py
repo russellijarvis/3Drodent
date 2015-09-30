@@ -49,7 +49,7 @@ from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
 
 
-import brain_functions as bf
+#import brain_functions as bf
 from neuron import h
 
 h('objref py, pc')
@@ -72,7 +72,7 @@ s1=''
 
 os.chdir(os.getcwd() + '/main')        
 
-h.cells, allrows2, ie0, ie1 =bf.mb(RANK, NCELL, SIZE, allrows2, gidvec,h,s1)
+#h.cells, allrows2, ie0, ie1 =bf.mb(RANK, NCELL, SIZE, allrows2, gidvec,h,s1)
 
 #info_swc=utils.gcs(utils.NCELL)
 #utils.seclists()
@@ -82,11 +82,38 @@ config = Config().load('config.json')
 utils = Utils(config)
 NCELL=utils.NCELL=18
 
-for i in 
-utils.celldict
+from neuron import h
 
-#nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
-nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
+h('{load_file("stdgui.hoc")}')
+h('{load_file("nrngui.hoc")}')
+h('load_file("import3d.hoc")')
+
+info_swc=utils.gcs(utils.NCELL)
+nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
+nclist, ecm, icm=utils.wirecells4()#wire cells on different hosts.
+h('forall{ for(x,0){ uninsert xtra }}') 
+
+def progress(pinvl, swlast):
+#From http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681&file=\bulb3d\util.py
+  sw = h.startsw()
+  print "t=%g wall interval %g"% (h.t, sw-swlast)
+  h.cvode.event(h.t+pinvl, (progress, (pinvl , sw)))
+
+def show_progress(invl):
+#From http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681&file=\bulb3d\util.py
+
+  global fih
+  if RANK == 0:
+    fih = h.FInitializeHandler(2, (progress, (invl, h.startsw())))
+
+show_progress(200)
+prun(tstop)
+h.xopen('tools.hoc')
+h.xopen('analysis2.hoc')
+
+execfile('analysisp3.py')
+h('time_finish=pc.time()')
+h('print time_finish')
 
 import numpy as np
 print 'sums of ecm and icm'

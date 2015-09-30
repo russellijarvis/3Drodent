@@ -102,8 +102,10 @@ class Utils(HocUtils):
         RANK=self.RANK
         h=self.h    
         pc=h.ParallelContext()
-        h('objref pc')
+        h('objref pc, py')
         h('pc = new ParallelContext()')
+        h('py = new PythonObject()')
+
         swcdict={}
         NFILE = 3175
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
@@ -130,9 +132,14 @@ class Utils(HocUtils):
                 cell.polarity=0
             
             h('objref nc')            
-            h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
             h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
+            h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
             h('pc.cell('+str(i)+', nc)') 
+            
+            
+            h('pc.set_gid2node(int(py.i), pc.id)')  # // associate gid i with this host
+            h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')            
+            h('pc.cell(int(py.i), nc)')             
             
             swc_tree = btmorph.STree2()
             swc_tree.read_SWC_tree_from_file(d[i][3])
@@ -194,6 +201,54 @@ class Utils(HocUtils):
                     root=0)
         return ecm, icm
         
+       
+    def prun(self,tstop):
+        #This code is from:
+        #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
+        cvode = h.CVode()
+        cvode.cache_efficient(1)
+    
+      # pc.spike_compress(0,0,1)
+    
+        pc.setup_transfer()
+        mindelay = pc.set_maxstep(10)
+        if RANK == 0:
+            print 'mindelay = %g' % mindelay
+        runtime = h.startsw()
+        exchtime = pc.wait_time()
+    
+        inittime = h.startsw()
+        h.stdinit()
+        inittime = h.startsw() - inittime
+        if RANK == 0:
+            print 'init time = %g' % inittime
+    
+        while h.t < tstop:
+            told = h.t
+            tnext = h.t + checkpoint_interval
+            if tnext > tstop:
+                tnext = tstop
+            pc.psolve(tnext)
+            if h.t == told:
+                if RANK == 0:
+                    print 'psolve did not advance time from t=%.20g to tnext=%.20g\n' \
+                        % (h.t, tnext)
+                break
+    
+        # if h.t%2==0: The problem is h.t is float multiple not integer multiple
+    
+            print 'working', h.t
+        runtime = h.startsw() - runtime
+        comptime = pc.step_time()
+        splittime = pc.vtransfer_time(1)
+        gaptime = pc.vtransfer_time()
+        exchtime = pc.wait_time() - exchtime
+        if RANK == 0:
+            print 'runtime = %g' % runtime
+        print comptime, exchtime, splittime, gaptime
+
+    
+    '''    
     def innerloop(self,i,data,ecm, icm):
         h=self.h    
         pc=h.ParallelContext()
@@ -283,7 +338,7 @@ class Utils(HocUtils):
         
         
         return self.nclist, ecm, icm
-    
+    '''
     def inner1(self,j):
         h=self.h    
         import numpy as np
@@ -488,53 +543,7 @@ class Utils(HocUtils):
                 #for sec in j.spk_trig_ls.allsec():
                  
         
-    
-    def prun(self,tstop):
-        #This code is from:
-        #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
-        cvode = h.CVode()
-        cvode.cache_efficient(1)
-    
-      # pc.spike_compress(0,0,1)
-    
-        pc.setup_transfer()
-        mindelay = pc.set_maxstep(10)
-        if RANK == 0:
-            print 'mindelay = %g' % mindelay
-        runtime = h.startsw()
-        exchtime = pc.wait_time()
-    
-        inittime = h.startsw()
-        h.stdinit()
-        inittime = h.startsw() - inittime
-        if RANK == 0:
-            print 'init time = %g' % inittime
-    
-        while h.t < tstop:
-            told = h.t
-            tnext = h.t + checkpoint_interval
-            if tnext > tstop:
-                tnext = tstop
-            pc.psolve(tnext)
-            if h.t == told:
-                if RANK == 0:
-                    print 'psolve did not advance time from t=%.20g to tnext=%.20g\n' \
-                        % (h.t, tnext)
-                break
-    
-        # if h.t%2==0: The problem is h.t is float multiple not integer multiple
-    
-            print 'working', h.t
-        runtime = h.startsw() - runtime
-        comptime = pc.step_time()
-        splittime = pc.vtransfer_time(1)
-        gaptime = pc.vtransfer_time()
-        exchtime = pc.wait_time() - exchtime
-        if RANK == 0:
-            print 'runtime = %g' % runtime
-        print comptime, exchtime, splittime, gaptime
-
-
+ 
     def innermost(self,data):
         from segment_distance import dist3D_segment_to_segment
         import numpy as np
