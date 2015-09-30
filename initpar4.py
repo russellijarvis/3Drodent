@@ -528,9 +528,10 @@ for i in range(RANK, NCELL,SIZE):
         #    print sec.name()
 print 'loop succeeded'   
 print dir(utils)
-         
-#nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
-nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
+#utils.gcs(NCELL)         
+nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
+#nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
+nclist, ecm, icm=utils.wirecells4()#wire cells on different hosts.
 
 #h.nclist,ecm,icm=bf.wirecells3(RANK,NCELL,SIZE,h,icm,ecm)
 

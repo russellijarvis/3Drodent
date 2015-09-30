@@ -26,10 +26,13 @@
                  "pvalb": 1 } ],
   "neuron": [{
       "hoc": [
+	  
         "stdgui.hoc",
-        "import3d.hoc",
-        "cell.hoc", 
+        "import3d.hoc"
 	"morph4.hoc"
+	"cell.hoc"
+	"stdgui.hoc"
+	"nrngui.hoc"
       ]
     }],
   "manifest": [

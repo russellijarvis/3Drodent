@@ -134,6 +134,7 @@ class Utils(HocUtils):
             h('objref nc')            
             h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
             h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
+            h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
             h('pc.cell('+str(i)+', nc)') 
             
             
@@ -370,7 +371,7 @@ class Utils(HocUtils):
                     coordict['gid']= int(j)
                     print coordict['gid'], cellc.gid1
                     coordict['seg']= seg.x
-                        
+                    
                     secnames = sec.name()  # h.secnames                            
                     coordict['secnames'] = str(secnames)
                     print seg.x, sec.name(), 'below x_xtra'
@@ -620,6 +621,11 @@ class Utils(HocUtils):
     #meters, continue on with code responsible for assigning a 
     #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
     
+        inittime = h.startsw()
+        h.stdinit()
+        inittime = h.startsw() - inittime
+        if RANK == 0:
+            print 'init time = %g' % inittime
     
                 r = 0.
                 import math
