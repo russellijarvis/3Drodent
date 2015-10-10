@@ -133,7 +133,6 @@ h('sprint(morphhuman,"%s%s",workingdir,"SWC-2013human")')
 
 # h('sprint(worm,"%s%s",workingdir,"/openworm/CNG version/")')
 
-checkpoint_interval = 50000.
 def gather(data):
 
     # https://github.com/NeuralEnsemble/PyNN/blob/master/examples/distrib_example.py
@@ -165,7 +164,7 @@ def pprint(str='', end='\n', comm=MPI.COMM_WORLD):
 
 h('proc pprint(){ if (pc.id()==0){ print $s1 }}')
 
-
+checkpoint_interval = 50000.
 def prun(tstop):
     #This code is from:
     #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
@@ -533,6 +532,7 @@ nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
 #nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
 nclist, ecm, icm=utils.wirecells4()#wire cells on different hosts.
 
+utils.tracenet()
 #h.nclist,ecm,icm=bf.wirecells3(RANK,NCELL,SIZE,h,icm,ecm)
 
 #h.nclist,ecm,icm=bf.wirecells2(RANK,NCELL,SIZE,h,icm,ecm)

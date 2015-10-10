@@ -39,8 +39,10 @@ class Utils(HocUtils):
         self.coordict=None
         self.celldict={}
         self.cellmorphdict={}
+        self.nclist = []
+        #self.pc=h.pc
 
-        
+    '''    
     def __del__(self):
         """
         AUTHORS:
@@ -62,7 +64,7 @@ class Utils(HocUtils):
         self.nclist = []  # Synaptic NetCon list on this host
         self.stim = None
         self.cells = []          # Cells on this host
-
+   '''
 # I do not know how to refer to relative paths in Python,
 # the below emulates a call to a relative path.
 
@@ -96,16 +98,21 @@ class Utils(HocUtils):
 
 
 
-    def gcs(self,NCELL):
+    def gcsneuroml(self,NCELL):
+        import neuroml
+        from neuroml.loaders import SWCLoader       
+        #/usr/local/lib/python2.7/dist-packages/neuron/neuroml/biophysics.py
+        #/home/russell/git/libNeuroML/neuroml/examples/ion_channel_generation.py       
+        #23550003583330
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        h=self.h    
+        from neuron import h
         pc=h.ParallelContext()
-        h('objref pc, py')
+        h=self.h    
+        h('objref pc, nc')
         h('pc = new ParallelContext()')
         h('py = new PythonObject()')
-
         swcdict={}
         NFILE = 3175
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
@@ -114,15 +121,102 @@ class Utils(HocUtils):
         d = { x: y for x,y in enumerate(info_swc)}
         import os
         os.chdir(os.getcwd() + '/main')   
-        gids = [ i for i in range(RANK, NCELL, SIZE) ]
-        itergids=iter(gids)
-        iterd=iter(d)
+        itergids = iter( i for i in range(RANK, NCELL, SIZE) )
+        morphxmldoc= [ SWCLoader.load_swc_single(d[i][3]) for i in itergids ]
+        return morphxmldoc
+            #cell = h.mkcell(d[i][3])
+            #morphxmldoc=SWCLoader.load_swc_single(d[i][3])
+            #print morphxmldoc            
+        
         for i in itergids:
-            cell = self.h.Cell() #use self.h.cell() for allen brain cell.
+            cell = h.mkcell(d[i][3])
+            #morphxmldoc=SWCLoader.load_swc_single(d[i][3])
+            print morphxmldoc
+            cell.geom_nseg()
             cell.gid1=i #itergids.next()
-            self.generate_morphology(cell, d[i][3])#iterd.next())#iterswc.next())
+            if 'pyramid' in d[i]:            
+                self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
+                cell.polarity=1
+            else:            
+            #inhibitory type stained cell.
+                self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
+                cell.polarity=0
+                
+            secnames=str(h.cas().name()) #cas=the currently accessed section.
+            print secnames                
+            cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])              
+            print cellind
+            h('forsec cell.all{ print secname()}')
+            h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')            
+            pc.set_gid2node(i,RANK)
+            h('pc.cell('+str(i)+', nc)')  # //
+            cell1=pc.gid2cell(i)
+            print cell1
+            self.celldict[i]=cell#(cell,swc_tree)
             self.cells.append(cell)
+            return morphxmldoc
            
+         
+        print len(h.List('NetCon'))            
+                
+        pol=[ a.polarity for a in self.cells ]       
+        import numpy as np
+        print np.sum(pol)
+        os.chdir(os.getcwd() + '/../')      
+        self.h.define_shape()        
+         
+        self.h('forall{ for(x,0){ insert xtra }}')
+        self.h('forall{ for(x,0){ insert extracellular}}')    
+        self.h('xopen("interpxyz.hoc")')
+        self.h('grindaway()')    
+        #self.h('xopen("seclists.hoc")')
+        #print gids
+        #print len(gids)      
+        
+
+    def gcs(self,NCELL):
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        RANK=self.RANK
+        from neuron import h
+        pc=h.ParallelContext()
+
+        
+        h=self.h    
+        h('objref pc, py, nc, cells')
+        h('pc = new ParallelContext()')
+        h('py = new PythonObject()')
+        #h('')
+        
+        swcdict={}
+        NFILE = 3175
+        fit_ids = self.description.data['fit_ids'][0] #excitatory        
+        self.cells_data = self.description.data['biophys'][0]['cells']
+        info_swc=self.prep_list()
+        d = { x: y for x,y in enumerate(info_swc)}
+        import os
+        os.chdir(os.getcwd() + '/main')   
+        itergids = iter( i for i in range(RANK, NCELL, SIZE) )
+        
+        #itergids=iter(gids)
+        #iterd=iter(d)
+        for i in itergids:
+            print i, 'itergids'
+            
+            #cell = self.h.Cell() #use self.h.cell() for allen brain cell.
+            cell = h.mkcell(d[i][3])
+            #self.generate_morphology(cell, d[i][3])#iterd.next())#iterswc.next())
+            #h('cell.geom_nseg()')
+                       
+            print cell, 'cell'
+            cell.geom_nseg()
+            cell.gid1=i #itergids.next()
+
+            print int(cell.gid1)
+            
+            '''
+            print type(cell), 'this does not always work'            
+             '''
             if 'pyramid' in d[i]:            
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1
@@ -131,20 +225,60 @@ class Utils(HocUtils):
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0
             
-            h('objref nc')            
-            h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
-            h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
-            h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
-            h('pc.cell('+str(i)+', nc)') 
+            #h('objref nc')            
+            #h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
+            #h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
+            #h('pc.set_gid2node('+str(i)+','+str(RANK)+')')  # // associate gid i with this host            
+            #h('pc.cell('+str(i)+', nc)') 
             
             
-            h('pc.set_gid2node(int(py.i), pc.id)')  # // associate gid i with this host
-            h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')            
-            h('pc.cell(int(py.i), nc)')             
+            #h('pc.set_gid2node(int(py.i), pc.id)')  # // associate gid i with this host
+            #h.cell.soma[0] netcon = new NetCon(&v(x), target)
+            #print dir(h.cell.soma)
+            #print dir(h.cell)
+
+            #nc = h.NetCon(h.cell.soma(1)._ref_v, null)
+            #h('topology()')
+            #nc = h.NetCon(self.h.Cell[0].soma(1)._ref_v, null, sec = self.h.Cell[0].soma[0])
+
+
+            #secnames = sec.name()
+            #cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  
+            #h('Cell['+str(cellind)+'].soma[0] nc =  new NetCon(&v(0.5), nil)')            
+
+            #h('forsec cell.somatic{ print secname()}')
+      
+            #h('crash here please')            
+            #print this can't be write
+            h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')            
+            #h('cell.soma nc =  new NetCon(&v(0.5), nil)')            
+                        
+            #h('pc.cell('+str(int(i))+', nc)')             
+            #pc.cell(i,h.nc)
             
-            swc_tree = btmorph.STree2()
-            swc_tree.read_SWC_tree_from_file(d[i][3])
-            self.cellmorphdict[i]=cell#(cell,swc_tree)
+            
+            pc.set_gid2node(i,RANK)
+            h('pc.cell('+str(i)+', nc)')  # //
+
+            #h('pc.set_gid2node('+str(i)+', pc.id)')  # // associate gid i with this host
+            #h('print Cell[0]')
+            #h('print Cell[0].soma[0]')
+            #h('print cell')
+            #h.cell=cell
+            #print dir(cell.soma)
+  
+            #h.cell.soma[0] h.nc  
+            #h('cell.soma[0] nc =  new NetCon(&v(0.5), nil)')
+            
+            #h.pc.cell(int(i),h.nc)
+
+            #h('cells.append(cell)')
+            #h('gidvec.append(py.i)')
+            cell1=pc.gid2cell(i)
+            print cell1
+            #swc_tree = btmorph.STree2()
+            #swc_tree.read_SWC_tree_from_file(d[i][3])
+            self.celldict[i]=cell#(cell,swc_tree)
             #stats=btmorph.BTStats(self.celldict[i][1])
             #Returns 3 lists for soma bifurcations and leafs.
             #Typicall synapses would only occur at leaf node collisions, this is something I had not considered.            
@@ -153,22 +287,20 @@ class Utils(HocUtils):
             #axonterminals=[i for i in ends if (i.get_content()['p3d'].type==)]
             #dendriteterminals=[i for i in ends if (i.get_content()['p3d'].type==)]
             #soma=[i for i in ends if (i.get_content()['p3d'].type==)]
-
+            self.cells.append(cell)
            
-
-        print len(h.List('NetCon'))            
-                
+         
+        len(h.List('NetCon'))                        
         pol=[ a.polarity for a in self.cells ]       
         import numpy as np
         print np.sum(pol)
         os.chdir(os.getcwd() + '/../')               
+        self.h.define_shape()        
         self.h('forall{ for(x,0){ insert xtra }}')
         self.h('forall{ for(x,0){ insert extracellular}}')    
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
-        #self.h('xopen("seclists.hoc")')
-        print gids
-        print len(gids)      
+         
 
  # no .clear() command
         
@@ -204,6 +336,14 @@ class Utils(HocUtils):
         
        
     def prun(self,tstop):
+        h=self.h    
+        pc=h.ParallelContext()
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        checkpoint_interval = 50000.
+
         #This code is from:
         #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
         cvode = h.CVode()
@@ -341,11 +481,18 @@ class Utils(HocUtils):
         return self.nclist, ecm, icm
     '''
     def inner1(self,j):
-        h=self.h    
+        from neuron import h
+
+        pc=h.ParallelContext()
+        h=self.h   
+
         import numpy as np
         coordictlist=[]
         coordict={}
         pc=h.pc
+        h('objref coords') 
+        h('coords = new Vector(3)')
+
         #from collections import defaultdict
         #coordict2 = defaultdict(dict)
         if j in self.celldict.keys():
@@ -369,18 +516,53 @@ class Utils(HocUtils):
                     coordict['coords'] = np.array(h.coords.to_python(),
                                               dtype=np.float64)
                     coordict['gid']= int(j)
-                    print coordict['gid'], cellc.gid1
+                    #print coordict['gid'], cellc.gid1
                     coordict['seg']= seg.x
                     
                     secnames = sec.name()  # h.secnames                            
                     coordict['secnames'] = str(secnames)
-                    print seg.x, sec.name(), 'below x_xtra'
+                    #print seg.x, sec.name(), 'below x_xtra'
                     h('print x_xtra('+ str(seg.x) +')')
                     coordictlist.append(coordict)
                 
         print len(coordictlist)#, len(seglist), 'length comparison'                                   
         return coordictlist
                     
+    def tracenet(self):
+        ncsize=len(self.h.NetCon)
+        import numpy as np
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        icm = np.zeros((NCELL, NCELL))
+        ecm = np.zeros((NCELL, NCELL))
+        COMM.Barrier()
+        my_icm = np.zeros_like(icm)
+        COMM.Reduce([icm, MPI.DOUBLE], [my_icm, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+        my_ecm = np.zeros_like(ecm)
+        COMM.Reduce([ecm, MPI.DOUBLE], [my_ecm, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+        #return ecm, icm
+        #make a list of tuples where each list element contains (srcid,tgtid,srcpop,tgtpop)
+        #for s in xrange(0,SIZE):            
+        for i in xrange(0,ncsize-1):
+            #srcs.append(int(self.h.NetCon[i].srcgid()))
+            #tgts.append(int(self.h.NetCon[i].postcell().gid1))
+            srcind=int(self.h.NetCon[i].srcgid())
+            tgtind=int(self.h.NetCon[i].postcell().gid1)
+            print int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]
+                #print strlist[tgtind]==dic[tgtind], ' sanity check '
+                #add to list of tuples, netcon src, netcon tgt, src index, target index.
+            lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
+        return lsoftup
+        #The broadcasting and gathering should happen on a different host.
+        #Actually this should all be reduced to rank0
+        #    data = COMM.bcast(lsoftup, root=s)  # ie root = rank
+        #return data        
+                    
+                
 
     def wirecells_s(self):
         '''wire cells on the same hosts'''
@@ -391,14 +573,18 @@ class Utils(HocUtils):
         RANK=self.RANK
         icm = np.zeros((NCELL, NCELL))
         ecm = np.zeros((NCELL, NCELL))
-        self.nclist=[]
-        h=self.h
+        #self.nclist
+        from neuron import h
         pc=h.ParallelContext()
 
+        h=self.h
+        
+        
         celliter= iter( (j, i) for j,l in self.celldict.iteritems() for i,t in self.celldict.iteritems() if i!=j )  
         for (j,i) in celliter:  
             print i==j           
             cell1=pc.gid2cell(i)
+            
             coordictlist=self.inner1(j)
             
             
@@ -446,7 +632,7 @@ class Utils(HocUtils):
 
                     #h('py.r = sqrt((coords2.x[0] - coordsx)^2 + (coords2.x[1] - coordsy)^2 + (coords2.x[2] - coordsz)^2)')
                     r = float(r)
-                    if r < 10:  
+                    if r < 1:  
 
                         print r,# 'this is not hopefuly wiring everything to everything'
                         gidcompare = ''
@@ -460,7 +646,7 @@ class Utils(HocUtils):
                         polarity=int(h.Cell[int(cellind)].polarity)
                         #print seg.x, coordict['seg'], coordict['secnames'], sec.name(), RANK, coordict['hostfrom'], coordict['gid'], int(h.Cell[int(cellind)].gid1)
                         
-                        print polarity
+                        #print polarity
                         h('objref syn_')        
                         if int(polarity) == int(0):
                             post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
@@ -471,7 +657,7 @@ class Utils(HocUtils):
                             ecm[i][gidn] = ecm[i][gidn] + 1
 
                         h(post_syn)
-                        print post_syn
+                        #print post_syn
                         h('print syn_')
                         syn_=h.syn_
                         h.syn_.cid=i
@@ -484,7 +670,8 @@ class Utils(HocUtils):
                         #target
                         #This object assignment syntax is a bit wrong.
                         ls=str(coordict['secnames'])+' nc =  new NetCon(&v('+str(coordict['seg'])+'),'+str(sec.name())+')'
-                        print cellc.gid1, "gid"
+                        print str(sec.name()), coordict['secnames'] , coordict['seg']                       
+                        #print cellc.gid1, "gid"
                         #print ls 
                         h(ls)
                         nc=h.nc                                                    
@@ -496,7 +683,7 @@ class Utils(HocUtils):
                         #nc=pc.gid_connect(coordict['gid'],syn_)                                        
                         nc.delay=1+r/0.4
                         nc.weight[0]=r/0.4   
-                        print nc, 'connected!'
+                        #print nc, 'connected!'
                         self.nclist.append(nc)
 
         ecm,icm = self.matrix_reduce(ecm,icm)
@@ -554,9 +741,11 @@ class Utils(HocUtils):
         RANK=self.RANK
         icm = np.zeros((NCELL, NCELL))
         ecm = np.zeros((NCELL, NCELL))
-        self.nclist=[]
-        h=self.h    
+        #self.nclist
+        from neuron import h
         pc=h.ParallelContext()
+        h=self.h    
+
         secnames = ''
         cellind =0 
         polarity = 0
@@ -621,18 +810,13 @@ class Utils(HocUtils):
     #meters, continue on with code responsible for assigning a 
     #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
     
-        inittime = h.startsw()
-        h.stdinit()
-        inittime = h.startsw() - inittime
-        if RANK == 0:
-            print 'init time = %g' % inittime
     
                 r = 0.
                 import math
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
                 r = float(r)
-                if r < 10:  
+                if r < 1:  
     
                     print r,# 'this is not hopefuly wiring everything to everything'
                     polarity = 0        
@@ -666,6 +850,7 @@ class Utils(HocUtils):
     
     def wirecells4(self):
         '''wire cells between hosts, but don't wire cells on the same host.'''
+        
         #def wirecells(RANK,NCELL,SIZE,h,icm,ecm):
         from segment_distance import dist3D_segment_to_segment
         import numpy as np
@@ -675,7 +860,7 @@ class Utils(HocUtils):
         RANK=self.RANK
         icm = np.zeros((NCELL, NCELL))
         ecm = np.zeros((NCELL, NCELL))
-        self.nclist=[]
+        #self.nclist
         h=self.h    
         pc=h.ParallelContext()
         secnames = ''
@@ -697,7 +882,7 @@ class Utils(HocUtils):
                 #print i==j           
                 cell1=pc.gid2cell(i)
                 coordictlist=self.inner1(i)
-            
+                print 'entered parallel wiring now'
             data = COMM.bcast(coordictlist, root=s)  # ie root = rank
             
             if len(data) != 0:
@@ -1183,7 +1368,7 @@ class Utils(HocUtils):
                 nc.delay = 2.0
 
                 self.synlist.append(syn)
-                self.nclist.append(nc)
+                self.q.append(nc)
 
 
     def connect_ring(self):

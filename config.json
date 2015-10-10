@@ -28,10 +28,10 @@
       "hoc": [
 	  
         "stdgui.hoc",
-        "import3d.hoc"
-	"morph4.hoc"
-	"cell.hoc"
-	"stdgui.hoc"
+        "import3d.hoc",
+	"morph4.hoc",
+	"cell.hoc",
+	"stdgui.hoc",
 	"nrngui.hoc"
       ]
     }],
