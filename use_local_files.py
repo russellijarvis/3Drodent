@@ -1,4 +1,4 @@
-==# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Tue Sep  8 17:01:22 2015
 
@@ -42,6 +42,16 @@ from allensdk.model.biophys_sim.config import Config
 from utils import Utils
 config = Config().load('config.json')
 utils = Utils(config)
+#This config file needs to have information about cells that actually is available.
+NCELL=utils.NCELL=18
+ 
+info_swc=utils.gcs(utils.NCELL)
+nclist, ecm, icm=utils.wirecells4()#wire cells on different hosts.
+lsoftup=utils.tracenet()
+utils.runp()
+h('forall{ for(x,0){ uninsert xtra }}') 
+
+
 
 def read_local_swc():
     morphs=[]
