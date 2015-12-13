@@ -173,16 +173,46 @@ class Utils(HocUtils):
         #print gids
         #print len(gids)      
         
+    def read_local_swc(self):
+        h=self.h    
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        RANK=self.RANK
+        #from neuron import h
+        pc=h.ParallelContext()
+        
+        morphs=[]
+        cells1=[]
+        self.initialize_hoc()
+        swclist=glob.glob('*.swc')
+        itergids = iter( i for i in range(RANK, len(swclist), SIZE) )
 
+        #for swcf, i in enumerate(swclist):
+        for i in itergids:
+            #morphology = swc.read_swc(swcf)
+            cell = h.mkcell(swclist[i])
+                #self.generate_morphology(cell, d[i][3])
+            self.generate_morphology(cell,swclist[i])
+            self.load_cell_parameters(cell, fit_ids[utils.cells_data[i]['type']])
+    
+            cell1=self.load_cell_parameters()       
+            cells1.append(cell1)
+            print type(cells1)
+            print type(cell1)
+            morphology.root
+            morphs.append(morphology)
+        return morphs,swclist,cells1
+    
     def gcs(self,NCELL):
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        from neuron import h
-        pc=h.ParallelContext()
-
+        
         
         h=self.h    
+        #from neuron import h
+        pc=h.ParallelContext()
+        
         h('objref pc, py, nc, cells')
         h('pc = new ParallelContext()')
         h('py = new PythonObject()')

@@ -44,7 +44,12 @@ config = Config().load('config.json')
 utils = Utils(config)
 #This config file needs to have information about cells that actually is available.
 NCELL=utils.NCELL=18
- 
+
+
+##
+# Move this business to utils.
+## 
+morphs,swclist,cells1=utils.read_local_swc() 
 info_swc=utils.gcs(utils.NCELL)
 nclist, ecm, icm=utils.wirecells4()#wire cells on different hosts.
 lsoftup=utils.tracenet()
@@ -53,21 +58,6 @@ h('forall{ for(x,0){ uninsert xtra }}')
 
 
 
-def read_local_swc():
-    morphs=[]
-    cells1=[]
-    Utils.initialize_hoc()
-    swclist=glob.glob('*.swc')
-    for swcf in swclist:
-        #morphology = swc.read_swc(swcf)
-        morphology=Utils.generate_morphology(swcf)
-        cell1=Utils.load_cell_parameters()       
-        cells1.append(cell1)
-        print type(cells1)
-        print type(cell1)
-        morphology.root
-        morphs.append(morphology)
-    return morphs,swclist,cells1
 
 #morphs,swclist,cells1=read_local_swc()        
 #cells1
