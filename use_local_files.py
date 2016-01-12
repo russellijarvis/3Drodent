@@ -49,12 +49,12 @@ NCELL=utils.NCELL=18
 ##
 # Move this business to utils.
 ## 
-morphs,swclist,cells1=utils.read_local_swc() 
+#morphs,swclist,cells1=utils.read_local_swc() 
 info_swc=utils.gcs(utils.NCELL)
-nclist, ecm, icm=utils.wirecells4()#wire cells on different hosts.
+nclist, ecm, icm=utils.wirecells()#wire cells on different hosts.
 lsoftup=utils.tracenet()
-utils.runp()
 h('forall{ for(x,0){ uninsert xtra }}') 
+utils.prun()
 
 
 
