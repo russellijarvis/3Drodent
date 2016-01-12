@@ -5,20 +5,7 @@ from mpi4py import MPI
 import btmorph
 import numpy
 
-#pc = h.ParallelContext()
-#h('objref pc')
-#h.pc = pc
-#s = "mpi4py thinks I am %d of %d,\
-# NEURON thinks I am %d of %d\n"
-#cw = MPI.COMM_WORLD
-#print s % (cw.rank, cw.size, pc.id(), pc.nhost())
-#h('time_start=pc.time()')
-#PROJECTROOT=os.getcwd()
-
-#from neuronpy.nrnobjects import cell
-#print dir(cell.Cell.soma)
-
-
+import numpy as np
 class Utils(HocUtils):
 
     _log = logging.getLogger(__name__)
@@ -41,13 +28,15 @@ class Utils(HocUtils):
         self.celldict={}
         self.cellmorphdict={}
         self.nclist = []
-        self.icm
-        self.my_icm
-        self.ecm
-        self.my_ecm
+
+        icm = np.zeros((self.NCELL, self.NCELL))
+        ecm = np.zeros((self.NCELL, self.NCELL))
+        if self.RANK==0:        
+            my_icm = np.zeros((self.NCELL, self.NCELL))
+            my_ecm = np.zeros((self.NCELL, self.NCELL))
+
         #self.pc=h.pc
 
-    '''    
     def __del__(self):
         """
         AUTHORS:
@@ -69,9 +58,8 @@ class Utils(HocUtils):
         self.nclist = []  # Synaptic NetCon list on this host
         self.stim = None
         self.cells = []          # Cells on this host
-   '''
-# I do not know how to refer to relative paths in Python,
-# the below emulates a call to a relative path.
+        # I do not know how to refer to relative paths in Python, 
+        # the below emulates a call to a relative path.
 
 
     
@@ -510,7 +498,7 @@ class Utils(HocUtils):
                 #print i==j           
                 cell1=pc.gid2cell(i)
                 coordictlist=self.nestedpre(i)
-                print 'entered parallel wiring now'
+                print 'entered parallel wiring now', s, i, j
             data = COMM.bcast(coordictlist, root=s)  # ie root = rank
             
             if len(data) != 0:
