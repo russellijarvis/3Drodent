@@ -53,7 +53,7 @@ NCELL=utils.NCELL=18
 info_swc=utils.gcs(utils.NCELL)
 nclist, ecm, icm=utils.wirecells()#wire cells on different hosts.
 lsoftup=utils.tracenet()
-h('forall{ for(x,0){ uninsert xtra }}') 
+#h('forall{ for(x,0){ uninsert xtra }}') 
 utils.prun()
 
 

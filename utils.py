@@ -327,6 +327,8 @@ class Utils(HocUtils):
         my_ecm = np.zeros_like(ecm)
         COMM.Reduce([ecm, MPI.DOUBLE], [my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
+        print np.sum(my_icm), np.sum(my_ecm), 'connection matrix sums' 
+
         lsoftup=[]
         #return ecm, icm
         #make a list of tuples where each list element contains (srcid,tgtid,srcpop,tgtpop)
@@ -336,6 +338,7 @@ class Utils(HocUtils):
             #tgts.append(int(self.h.NetCon[i].postcell().gid1))
             srcind=int(self.h.NetCon[i].srcgid())
             tgtind=int(self.h.NetCon[i].postcell().gid1)
+            print 'this is evidently not printing, some of these objects have been destroyed!'
             print int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]
                 #print strlist[tgtind]==dic[tgtind], ' sanity check '
                 #add to list of tuples, netcon src, netcon tgt, src index, target index.
@@ -507,6 +510,7 @@ class Utils(HocUtils):
    
         data=None                        
         ecm,icm = self.matrix_reduce(ecm,icm)
+        print np.sum(ecm), np.sum(icm), self.nclist, "sums of connectivity, algorithm succeeded with destroying internal objects?"
         return (self.nclist, ecm, icm)
 
 
