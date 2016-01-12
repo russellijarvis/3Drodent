@@ -6,7 +6,19 @@ import btmorph
 import numpy
 
 import numpy as np
-class Utils(HocUtils):
+
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s - %(funcName)s - %(lineno)d')
+fh = logging.FileHandler('wiring.log')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+import unittest
+
+class Utils(HocUtils,unittest):
 
     _log = logging.getLogger(__name__)
     
@@ -202,7 +214,7 @@ class Utils(HocUtils):
         my_ecm = np.zeros_like(ecm)
         COMM.Reduce([ecm, MPI.DOUBLE], [my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        return ecm, icm
+        return my_ecm, my_icm
         
        
     def prun(self,tstop):
@@ -465,6 +477,11 @@ class Utils(HocUtils):
                     nc.delay=1+r/0.4
                     nc.weight[0]=r/0.4    
                     self.nclist.append(nc)
+                    assert np.sum(ecm)!=0
+                    assert np.sum(icm)!=0
+                    logger.debug('This is a critical message.',nc, ecm, icm)
+                    logger.debug('This is a low-level debug message.',nc, ecm, icm)
+
             h('uninsert xtra')                          
         return self.nclist, ecm, icm
     
@@ -489,10 +506,8 @@ class Utils(HocUtils):
         h('coords = new Vector(3)')
         h('objref pc')
         h('pc = new ParallelContext()')        
- 
         coordict=None
         coordictlist=None
-        
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         for s in xrange(0, SIZE):
@@ -501,16 +516,21 @@ class Utils(HocUtils):
                 #print i==j           
                 cell1=pc.gid2cell(i)
                 coordictlist=self.nestedpre(i)
-                print 'entered parallel wiring now', s, i, j
+                #logger.info(
+                print('entered parallel wiring now', s, i, j)
             data = COMM.bcast(coordictlist, root=s)  # ie root = rank
-            
             if len(data) != 0:
                 self.nclist, ecm, icm = self.nestedpost(data)
-
-   
-        data=None                        
-        ecm,icm = self.matrix_reduce(ecm,icm)
-        print np.sum(ecm), np.sum(icm), self.nclist, "sums of connectivity, algorithm succeeded with destroying internal objects?"
+                #logger.debug
+                print('This is a critical message. \n', self.nclist, ecm, icm)
+                #logger.debug
+                print('This is a low-level debug message.\n', self.nclist, ecm, icm)
+        data=None
+        assert np.sum(ecm)!=0
+        assert np.sum(icm)!=0                         
+        my_ecm,my_icm = self.matrix_reduce(ecm,icm)
+        #logger.debug
+        print('sums of connectivity, algorithm succeeded with destroying internal objects?\n' %( np.sum(my_ecm), np.sum(my_icm), self.nclist) )
         return (self.nclist, ecm, icm)
 
 

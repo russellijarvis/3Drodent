@@ -12,6 +12,13 @@ from allensdk.api.queries.cell_types_api import CellTypesApi
 import allensdk.core.swc as swc
 import os
 from allensdk.core.nwb_data_set import NwbDataSet
+import d3py
+import glob
+from allensdk.model.biophysical_perisomatic.utils import Utils
+from allensdk.model.biophys_sim.config import Config
+
+
+
 
 
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
@@ -35,10 +42,6 @@ information=read_local_json()
 #Pvalb:  Inhibitory aspiny cells (i.e. it clustered the fast-spiking Pvalb cells)
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
 
-
-import glob
-from allensdk.model.biophysical_perisomatic.utils import Utils
-from allensdk.model.biophys_sim.config import Config
 from utils import Utils
 config = Config().load('config.json')
 utils = Utils(config)
@@ -52,9 +55,11 @@ NCELL=utils.NCELL=18
 #morphs,swclist,cells1=utils.read_local_swc() 
 info_swc=utils.gcs(utils.NCELL)
 nclist, ecm, icm=utils.wirecells()#wire cells on different hosts.
+
+#make d3py interact with ecm and icm
+#d3py
 lsoftup=utils.tracenet()
-#h('forall{ for(x,0){ uninsert xtra }}') 
-utils.prun()
+#utils.prun(10)
 
 
 
