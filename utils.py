@@ -18,7 +18,7 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 import unittest
 
-class Utils(HocUtils,unittest):
+class Utils(HocUtils):
 
     _log = logging.getLogger(__name__)
     
@@ -41,11 +41,11 @@ class Utils(HocUtils,unittest):
         self.cellmorphdict={}
         self.nclist = []
 
-        icm = np.zeros((self.NCELL, self.NCELL))
-        ecm = np.zeros((self.NCELL, self.NCELL))
+        self.icm = np.zeros((self.NCELL, self.NCELL))
+        self.ecm = np.zeros((self.NCELL, self.NCELL))
         if self.RANK==0:        
-            my_icm = np.zeros((self.NCELL, self.NCELL))
-            my_ecm = np.zeros((self.NCELL, self.NCELL))
+            self.my_icm = np.zeros((self.NCELL, self.NCELL))
+            self.my_ecm = np.zeros((self.NCELL, self.NCELL))
 
         #self.pc=h.pc
 
@@ -199,22 +199,22 @@ class Utils(HocUtils,unittest):
         allsecs=self.h.SectionList()
         return allsecs
 
-    def matrix_reduce(self,ecm,icm):       
+    def matrix_reduce(self):       
         import numpy as np
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        icm = np.zeros((NCELL, NCELL))
-        ecm = np.zeros((NCELL, NCELL))
+        self.icm = np.zeros((NCELL, NCELL))
+        self.ecm = np.zeros((NCELL, NCELL))
         COMM.Barrier()
-        my_icm = np.zeros_like(icm)
-        COMM.Reduce([icm, MPI.DOUBLE], [my_icm, MPI.DOUBLE], op=MPI.SUM,
+        self.my_icm = np.zeros_like(self.icm)
+        COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        my_ecm = np.zeros_like(ecm)
-        COMM.Reduce([ecm, MPI.DOUBLE], [my_ecm, MPI.DOUBLE], op=MPI.SUM,
+        self.my_ecm = np.zeros_like(self.ecm)
+        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        return my_ecm, my_icm
+        return self.my_ecm, self.my_icm
         
        
     def prun(self,tstop):
@@ -306,21 +306,21 @@ class Utils(HocUtils,unittest):
                     coordict['seg']= seg.x                    
                     secnames = sec.name()  # h.secnames                            
                     coordict['secnames'] = str(secnames)
-                    h('print x_xtra('+ str(seg.x) +')')
+                    #h('print x_xtra('+ str(seg.x) +')')
                     coordictlist.append(coordict)               
-        print len(coordictlist)                                   
+        #print len(coordictlist)                                   
         return coordictlist
              
 
         '''
         Long term goal is to make tracenet a class method 
-        ecm and icm should be class attributes.
+        self.ecm and self.icm should be class attributes.
     class NetStat(self):
         #They advantage of creating a seperate object for stats of abstract facts about the model
         #Versus the biological model is because
         __init__(self):
-        self.ecm
-        self.icm
+        self.self.ecm
+        self.self.icm
         '''
        
     def tracenet(self):
@@ -330,19 +330,19 @@ class Utils(HocUtils,unittest):
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        icm = np.zeros((NCELL, NCELL))
-        ecm = np.zeros((NCELL, NCELL))
+        self.icm = np.zeros((NCELL, NCELL))
+        self.ecm = np.zeros((NCELL, NCELL))
         COMM.Barrier()
-        my_icm = np.zeros_like(icm)
-        COMM.Reduce([icm, MPI.DOUBLE], [my_icm, MPI.DOUBLE], op=MPI.SUM,
+        self.my_icm = np.zeros_like(self.icm)
+        COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        my_ecm = np.zeros_like(ecm)
-        COMM.Reduce([ecm, MPI.DOUBLE], [my_ecm, MPI.DOUBLE], op=MPI.SUM,
+        self.my_ecm = np.zeros_like(self.ecm)
+        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        print np.sum(my_icm), np.sum(my_ecm), 'connection matrix sums' 
+        print np.sum(self.my_icm), np.sum(self.my_ecm), 'connection matrix sums' 
 
         lsoftup=[]
-        #return ecm, icm
+        #return self.ecm, self.icm
         #make a list of tuples where each list element contains (srcid,tgtid,srcpop,tgtpop)
         #for s in xrange(0,SIZE):            
         for i in xrange(0,ncsize-1):
@@ -389,8 +389,8 @@ class Utils(HocUtils,unittest):
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        icm = np.zeros((NCELL, NCELL))
-        ecm = np.zeros((NCELL, NCELL))
+        self.icm = np.zeros((NCELL, NCELL))
+        self.ecm = np.zeros((NCELL, NCELL))
         #self.nclist
         from neuron import h
         pc=h.ParallelContext()
@@ -409,13 +409,13 @@ class Utils(HocUtils,unittest):
         for k,i,t in iterdata :                          
             iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
             for seg,sec in iterseg:
-                print seg.x, sec.name(), k['secnames']
+                #print seg.x, sec.name(), k['secnames']
                 h('objref cell1')
                 h('cell1=pc.gid2cell('+str(i)+')')
                 secnames = sec.name()
                 cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
-     
-                    
+                h('insert xtra')
+                #h('for cell1.all{for(x,0){ insert xtra}}')    
                 h(str('coords2.x[2]=') + str('z_xtra(')
                   + str(seg.x) + ')')
                 h(str('coords2.x[1]=') + str('y_xtra(')
@@ -448,8 +448,9 @@ class Utils(HocUtils,unittest):
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
                 r = float(r)
-                if r < 1:  
-    
+                assert r>=10
+                if r < 10:  
+                    
                     print r,# 'this is not hopefuly wiring everything to everything'
                     polarity = 0        
                     polarity=int(h.Cell[int(cellind)].polarity)
@@ -459,11 +460,16 @@ class Utils(HocUtils,unittest):
                     h('objref syn_')        
                     if int(polarity) == int(0):
                         post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
-                        icm[i][gidn] = icm[i][gidn] + 1
+                        self.icm[i][gidn] = self.icm[i][gidn] + 1
+                        print i,gidn
+                        assert np.sum(self.icm)!=0
+  
                     else:
     
                         post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
-                        ecm[i][gidn] = ecm[i][gidn] + 1
+                        self.ecm[i][gidn] = self.ecm[i][gidn] + 1
+                        print i,gidn
+                        assert np.sum(self.ecm)!=0
     
                     h(post_syn)
                     print post_syn
@@ -477,13 +483,11 @@ class Utils(HocUtils,unittest):
                     nc.delay=1+r/0.4
                     nc.weight[0]=r/0.4    
                     self.nclist.append(nc)
-                    assert np.sum(ecm)!=0
-                    assert np.sum(icm)!=0
-                    logger.debug('This is a critical message.',nc, ecm, icm)
-                    logger.debug('This is a low-level debug message.',nc, ecm, icm)
+                    logger.debug('This is a critical message.',nc, self.ecm, self.icm)
+                    logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
 
-            h('uninsert xtra')                          
-        return self.nclist, ecm, icm
+            #h('uninsert xtra')                          
+        return self.nclist, self.ecm, self.icm
     
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
@@ -494,8 +498,8 @@ class Utils(HocUtils,unittest):
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        icm = np.zeros((NCELL, NCELL))
-        ecm = np.zeros((NCELL, NCELL))
+        self.icm = np.zeros((NCELL, NCELL))
+        self.ecm = np.zeros((NCELL, NCELL))
         #self.nclist
         h=self.h    
         pc=h.ParallelContext()
@@ -520,18 +524,20 @@ class Utils(HocUtils,unittest):
                 print('entered parallel wiring now', s, i, j)
             data = COMM.bcast(coordictlist, root=s)  # ie root = rank
             if len(data) != 0:
-                self.nclist, ecm, icm = self.nestedpost(data)
+                self.nclist, self.ecm, self.icm = self.nestedpost(data)
                 #logger.debug
-                print('This is a critical message. \n', self.nclist, ecm, icm)
+                print('This is a critical message. \n', self.nclist, self.ecm, self.icm)
                 #logger.debug
-                print('This is a low-level debug message.\n', self.nclist, ecm, icm)
+                print('This is a low-level debug message.\n', self.nclist, self.ecm, self.icm)
+                assert np.sum(self.ecm)!=0
+                assert np.sum(self.icm)!=0                         
+                self.my_ecm,self.my_icm = self.matrix_reduce()
+                #logger.debug
+                print('sums of connectivity, algorithm succeeded with destroying internal objects?\n')
+                print np.sum(self.my_ecm), np.sum(self.my_icm), self.nclist 
+        assert len(self.nclist)!=0          
         data=None
-        assert np.sum(ecm)!=0
-        assert np.sum(icm)!=0                         
-        my_ecm,my_icm = self.matrix_reduce(ecm,icm)
-        #logger.debug
-        print('sums of connectivity, algorithm succeeded with destroying internal objects?\n' %( np.sum(my_ecm), np.sum(my_icm), self.nclist) )
-        return (self.nclist, ecm, icm)
+        return (self.nclist, self.ecm, self.icm)
 
 
     def generate_morphology(self, cell, morph_filename):
@@ -667,8 +673,8 @@ class Utils(HocUtils,unittest):
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        icm = np.zeros((NCELL, NCELL))
-        ecm = np.zeros((NCELL, NCELL))
+        self.icm = np.zeros((NCELL, NCELL))
+        self.ecm = np.zeros((NCELL, NCELL))
         #self.nclist
         from neuron import h
         pc=h.ParallelContext()
@@ -706,7 +712,7 @@ class Utils(HocUtils,unittest):
                     r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                     gidn=coordict['gid']    
                     r = float(r)
-                    if r < 1:  
+                    if r < 10:  
                         print r,# 'this is not hopefuly wiring everything to everything'
                         gidcompare = ''
                         polarity = 0
@@ -718,11 +724,11 @@ class Utils(HocUtils,unittest):
                         h('objref syn_')        
                         if int(polarity) == int(0):
                             post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
-                            icm[i][gidn] = icm[i][gidn] + 1
+                            self.icm[i][gidn] = self.icm[i][gidn] + 1
                         else:
 
                             post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
-                            ecm[i][gidn] = ecm[i][gidn] + 1
+                            self.ecm[i][gidn] = self.ecm[i][gidn] + 1
 
                         h(post_syn)
                         h('print syn_')
@@ -739,9 +745,9 @@ class Utils(HocUtils,unittest):
                         nc.delay=1+r/0.4
                         nc.weight[0]=r/0.4   
                         self.nclist.append(nc)
-
-        ecm,icm = self.matrix_reduce(ecm,icm)
-        return (self.nclist, ecm, icm)
+        assert len(self.nclist)!=0  
+        self.ecm,self.icm = self.matrix_reduce()
+        return (self.nclist, self.ecm, self.icm)
 
                    
 

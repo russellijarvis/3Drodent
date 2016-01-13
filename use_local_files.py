@@ -46,7 +46,7 @@ from utils import Utils
 config = Config().load('config.json')
 utils = Utils(config)
 #This config file needs to have information about cells that actually is available.
-NCELL=utils.NCELL=18
+NCELL=utils.NCELL=20
 
 
 ##
