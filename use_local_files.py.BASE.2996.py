@@ -12,13 +12,14 @@ from allensdk.api.queries.cell_types_api import CellTypesApi
 import allensdk.core.swc as swc
 import os
 from allensdk.core.nwb_data_set import NwbDataSet
-import glob
-from allensdk.model.biophysical_perisomatic.utils import Utils
-from allensdk.model.biophys_sim.config import Config
-import d3py
+from mpi4py import MPI
 
+# initialize the MPI interface
+COMM = MPI.COMM_WORLD
+SIZE = COMM.Get_size()
+RANK = COMM.Get_rank()
 
-
+PROJECTROOT=os.getcwd()
 
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 
@@ -41,29 +42,44 @@ information=read_local_json()
 #Pvalb:  Inhibitory aspiny cells (i.e. it clustered the fast-spiking Pvalb cells)
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
 
+
+NCELL=185     
+import glob
+from allensdk.model.biophysical_perisomatic.utils import Utils
+from allensdk.model.biophys_sim.config import Config
 from utils import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=100)
-#This config file needs to have information about cells that actually is available.
-#NCELL=utils.NCELL=20
-assert utils.NCELL==100
+utils = Utils(config)
+utils.NCELL=18
 
-##
-# Move this business to utils.
-## 
-#morphs,swclist,cells1=utils.read_local_swc() 
 info_swc=utils.gcs(utils.NCELL)
-utils.wirecells()#wire cells on different hosts.
-utils.matrix_reduce()
-if COMM.rank==0:
-    utils.plotgraph()
-util.h.xopen("rigp.hoc")
-utils.prun(100)    
+utils.h.nclist, ecm, icm=utils.wirecells3()
+pc = utils.h.ParallelContext()
+s = "mpi4py thinks I am %d of %d,\
+# NEURON thinks I am %d of %d\n"
+cw = MPI.COMM_WORLD
+print s % (cw.rank, cw.size, pc.id(), pc.nhost())
+time_start=pc.time()
+print time_start
 
-#utils.prun(10)
 
 
 
+def read_local_swc():
+    morphs=[]
+    cells1=[]
+    Utils.initialize_hoc()
+    swclist=glob.glob('*.swc')
+    for swcf in swclist:
+        #morphology = swc.read_swc(swcf)
+        morphology=Utils.generate_morphology(swcf)
+        cell1=Utils.load_cell_parameters()       
+        cells1.append(cell1)
+        print type(cells1)
+        print type(cell1)
+        morphology.root
+        morphs.append(morphology)
+    return morphs,swclist,cells1
 
 #morphs,swclist,cells1=read_local_swc()        
 #cells1

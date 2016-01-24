@@ -3,7 +3,7 @@ import logging
 import glob
 from mpi4py import MPI
 import btmorph
-import numpy
+import numpy as np
 
 import numpy as np
 
@@ -18,11 +18,19 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 import unittest
 
-class Utils(HocUtils):
+
+#import neuroelectro, and test each cell to see if it conforms to acceptable dynamics for the allen brain 
+#ontology it is supposed to represent.
+#
+
+from pdb import Pdb
+import neuroelectro
+
+class Utils(HocUtils):#search multiple inheritance unittest.
 
     _log = logging.getLogger(__name__)
     
-    def __init__(self, description):
+    def __init__(self, description, NCELL=20):
       
         super(Utils, self).__init__(description)
         self.stim = None
@@ -30,7 +38,7 @@ class Utils(HocUtils):
         self.sampling_rate = None
         self.cells = []
         self.gidlist=[]
-        self.NCELL=0
+        self.NCELL=NCELL
         self.celldict={}
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
@@ -75,7 +83,7 @@ class Utils(HocUtils):
 
 
     
-    def prep_list(self):                
+    def prep_list(self):                    
         import pickle
         allrows = pickle.load(open('allrows.p', 'rb'))
         allrows.remove(allrows[0])#The first list element are the column titles. 
@@ -162,8 +170,11 @@ class Utils(HocUtils):
             if 'pyramid' in d[i]:            
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1
+                #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            
             #inhibitory cell.
+                #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
+
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
@@ -174,7 +185,6 @@ class Utils(HocUtils):
             self.cells.append(cell)
         len(h.List('NetCon'))                        
         pol=[ a.polarity for a in self.cells ]       
-        import numpy as np
         print np.sum(pol)
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
@@ -200,13 +210,10 @@ class Utils(HocUtils):
         return allsecs
 
     def matrix_reduce(self):       
-        import numpy as np
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        self.icm = np.zeros((NCELL, NCELL))
-        self.ecm = np.zeros((NCELL, NCELL))
         COMM.Barrier()
         self.my_icm = np.zeros_like(self.icm)
         COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
@@ -214,7 +221,6 @@ class Utils(HocUtils):
         self.my_ecm = np.zeros_like(self.ecm)
         COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        return self.my_ecm, self.my_icm
         
        
     def prun(self,tstop):
@@ -256,10 +262,7 @@ class Utils(HocUtils):
                 if RANK == 0:
                     print 'psolve did not advance time from t=%.20g to tnext=%.20g\n' \
                         % (h.t, tnext)
-                break
-    
-        # if h.t%2==0: The problem is h.t is float multiple not integer multiple
-    
+                break    
             print 'working', h.t
         runtime = h.startsw() - runtime
         comptime = pc.step_time()
@@ -281,7 +284,6 @@ class Utils(HocUtils):
         from neuron import h
         pc=h.ParallelContext()
         h=self.h   
-        import numpy as np
         coordictlist=[]
         coordict={}
         pc=h.pc
@@ -304,65 +306,11 @@ class Utils(HocUtils):
                                               dtype=np.float64)
                     coordict['gid']= int(j)
                     coordict['seg']= seg.x                    
-                    secnames = sec.name()  # h.secnames                            
+                    secnames = sec.name()                         
                     coordict['secnames'] = str(secnames)
-                    #h('print x_xtra('+ str(seg.x) +')')
                     coordictlist.append(coordict)               
-        #print len(coordictlist)                                   
         return coordictlist
-             
-
-        '''
-        Long term goal is to make tracenet a class method 
-        self.ecm and self.icm should be class attributes.
-    class NetStat(self):
-        #They advantage of creating a seperate object for stats of abstract facts about the model
-        #Versus the biological model is because
-        __init__(self):
-        self.self.ecm
-        self.self.icm
-        '''
        
-    def tracenet(self):
-        ncsize=len(self.h.NetCon)
-        import numpy as np
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        COMM = self.COMM
-        RANK=self.RANK
-        self.icm = np.zeros((NCELL, NCELL))
-        self.ecm = np.zeros((NCELL, NCELL))
-        COMM.Barrier()
-        self.my_icm = np.zeros_like(self.icm)
-        COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.my_ecm = np.zeros_like(self.ecm)
-        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        print np.sum(self.my_icm), np.sum(self.my_ecm), 'connection matrix sums' 
-
-        lsoftup=[]
-        #return self.ecm, self.icm
-        #make a list of tuples where each list element contains (srcid,tgtid,srcpop,tgtpop)
-        #for s in xrange(0,SIZE):            
-        for i in xrange(0,ncsize-1):
-            #srcs.append(int(self.h.NetCon[i].srcgid()))
-            #tgts.append(int(self.h.NetCon[i].postcell().gid1))
-            srcind=int(self.h.NetCon[i].srcgid())
-            tgtind=int(self.h.NetCon[i].postcell().gid1)
-            print 'this is evidently not printing, some of these objects have been destroyed!'
-            print int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]
-                #print strlist[tgtind]==dic[tgtind], ' sanity check '
-                #add to list of tuples, netcon src, netcon tgt, src index, target index.
-            lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
-        return lsoftup
-        #The broadcasting and gathering should happen on a different host.
-        #Actually this should all be reduced to rank0
-        #    data = COMM.bcast(lsoftup, root=s)  # ie root = rank
-        #return data        
-  
-       
- 
     def nestedpost(self,data):
         """
         This is the inner most loop of the parallel wiring algorithm.
@@ -384,14 +332,10 @@ class Utils(HocUtils):
         and I am considering using them here also
         """
         from segment_distance import dist3D_segment_to_segment
-        import numpy as np
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        self.icm = np.zeros((NCELL, NCELL))
-        self.ecm = np.zeros((NCELL, NCELL))
-        #self.nclist
         from neuron import h
         pc=h.ParallelContext()
         h=self.h    
@@ -448,7 +392,6 @@ class Utils(HocUtils):
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
                 r = float(r)
-                assert r>=10
                 if r < 10:  
                     
                     print r,# 'this is not hopefuly wiring everything to everything'
@@ -456,7 +399,7 @@ class Utils(HocUtils):
                     polarity=int(h.Cell[int(cellind)].polarity)
                     print seg.x, k['seg'], k['secnames'], sec.name(), RANK, k['hostfrom'], k['gid'], int(h.Cell[int(cellind)].gid1)
                     
-                    print polarity
+                    print polarity, 'polarity'
                     h('objref syn_')        
                     if int(polarity) == int(0):
                         post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
@@ -465,8 +408,17 @@ class Utils(HocUtils):
                         assert np.sum(self.icm)!=0
   
                     else:
-    
+                        #TODO modify mod file for exp2syn such that cid exists.
+                        #Also because exp2syn is an inbuilt mechanism need to refactor explicitly such that custom file 
+                        #myexp2syn is used instead.
+                        #post_syn = secnames + ' ' + 'syn_ = new exp2syn(' + str(seg.x) + ')'
+                        #post_syn='syn_ = self.h.Exp2Syn('+str(seg.x)+',sec='+secnames+')'
+                        
+                        #syn_.e = connection["erev"]
+                        
+
                         post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
+                        
                         self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                         print i,gidn
                         assert np.sum(self.ecm)!=0
@@ -483,24 +435,29 @@ class Utils(HocUtils):
                     nc.delay=1+r/0.4
                     nc.weight[0]=r/0.4    
                     self.nclist.append(nc)
-                    logger.debug('This is a critical message.',nc, self.ecm, self.icm)
-                    logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
+                    
+                    #source_section = source_cell.soma[0]
+                    
+                    #Below syntax wont work on a parallel architecture.
+                    #nc = self.h.NetCon(source_section(0.5)._ref_v, syn, sec=source_section)
+                    #nc.weight[0] = connection["weight"]
+                    nc.threshold = -20
+                    nc.delay = 2.0
+
+                    #logger.debug('This is a critical message.',nc, self.ecm, self.icm)
+                    #logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
 
             #h('uninsert xtra')                          
-        return self.nclist, self.ecm, self.icm
+        #return self.nclist, self.ecm, self.icm
     
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
         The function returns two adjacency matrices. One matrix whose elements are excitatory connections and another matrix of inhibitory connections"""
         from segment_distance import dist3D_segment_to_segment
-        import numpy as np
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        self.icm = np.zeros((NCELL, NCELL))
-        self.ecm = np.zeros((NCELL, NCELL))
-        #self.nclist
         h=self.h    
         pc=h.ParallelContext()
         secnames = ''
@@ -517,27 +474,50 @@ class Utils(HocUtils):
         for s in xrange(0, SIZE):
             celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
             for (i,j) in celliter:  
-                #print i==j           
                 cell1=pc.gid2cell(i)
                 coordictlist=self.nestedpre(i)
-                #logger.info(
-                print('entered parallel wiring now', s, i, j)
             data = COMM.bcast(coordictlist, root=s)  # ie root = rank
             if len(data) != 0:
-                self.nclist, self.ecm, self.icm = self.nestedpost(data)
-                #logger.debug
-                print('This is a critical message. \n', self.nclist, self.ecm, self.icm)
-                #logger.debug
-                print('This is a low-level debug message.\n', self.nclist, self.ecm, self.icm)
-                assert np.sum(self.ecm)!=0
-                assert np.sum(self.icm)!=0                         
-                self.my_ecm,self.my_icm = self.matrix_reduce()
-                #logger.debug
-                print('sums of connectivity, algorithm succeeded with destroying internal objects?\n')
-                print np.sum(self.my_ecm), np.sum(self.my_icm), self.nclist 
-        assert len(self.nclist)!=0          
-        data=None
+                self.nestedpost(data)
+        print('sums of connectivity\n')
         return (self.nclist, self.ecm, self.icm)
+
+        
+    def tracenet(self):
+        ncsize=len(self.h.NetCon)
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        self.matrix_reduce()
+               
+        lsoftup=[]
+        for i, j in enumerate(self.h.NetCon):
+            if type(j)!=None:
+                assert type(j)!=None
+                srcind=int(j.srcgid())
+                tgtind=int(j.postcell().gid1)
+                print 'this is evidently not printing, some of these objects have been destroyed!'
+                print int(j.srcgid()),int(j.postcell().gid1),self.celldict[srcind],self.celldict[tgtind]
+                lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
+        return lsoftup
+      
+      
+    def plotgraph(self):
+        assert self.COMM.rank==0
+
+        import json
+        import networkx as nx
+        from networkx.readwrite import json_graph
+        import http_server  
+        G=nx.from_numpy_matrix(self.my_ecm)
+        d = json_graph.node_link_data(G)            
+        json.dump(d, open('force/force.json','w'))
+        print('Wrote node-link JSON data to force/force.json')
+        # open URL in running web browser
+        #http_server.load_url('force/force.html')
+        #print('Or copy all files in force/ to webserver and load force/force.html')
+
 
 
     def generate_morphology(self, cell, morph_filename):
@@ -668,26 +648,23 @@ class Utils(HocUtils):
         
     def wirecells_s(self):
         '''wire cells on the same hosts'''
-        import numpy as np
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        self.icm = np.zeros((NCELL, NCELL))
-        self.ecm = np.zeros((NCELL, NCELL))
-        #self.nclist
         from neuron import h
         pc=h.ParallelContext()
         h=self.h
         celliter= iter( (j, i) for j,l in self.celldict.iteritems() for i,t in self.celldict.iteritems() if i!=j )  
         for (j,i) in celliter:  
-            print i==j           
+            print i==j, 'i==j', i,j           
             cell1=pc.gid2cell(i)            
-            coordictlist=self.inner1(j)
+            coordictlist=self.nestedpre(j)
             for coordict in coordictlist:    
                 seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_rx_ls for seg in sec )                          
                 for (seg, sec, cellc) in seglist:
                     secnames = sec.name()
+                   
                     cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
                     h('objref coords2') 
                     h('coords2 = new Vector(3)')
@@ -712,8 +689,10 @@ class Utils(HocUtils):
                     r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                     gidn=coordict['gid']    
                     r = float(r)
+                    print r, seg, sec, cellc, sec.name(), h.coordsx, coordsx
+
                     if r < 10:  
-                        print r,# 'this is not hopefuly wiring everything to everything'
+                        print r# 'this is not hopefuly wiring everything to everything'
                         gidcompare = ''
                         polarity = 0
                         #cellind is a cell index, that is relative to the host. So the identifier repeats on different hosts.
@@ -745,9 +724,8 @@ class Utils(HocUtils):
                         nc.delay=1+r/0.4
                         nc.weight[0]=r/0.4   
                         self.nclist.append(nc)
-        assert len(self.nclist)!=0  
-        self.ecm,self.icm = self.matrix_reduce()
-        return (self.nclist, self.ecm, self.icm)
+        #self.ecm,self.icm = self.matrix_reduce()
+        #return (self.nclist, self.ecm, self.icm)
 
                    
 
