@@ -2,8 +2,6 @@ from allensdk.model.biophys_sim.neuron.hoc_utils import HocUtils
 import logging
 import glob
 from mpi4py import MPI
-import btmorph
-import numpy as np
 
 import numpy as np
 
@@ -222,6 +220,46 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
         
+    def plot_save_matrix(self):    
+        import matplotlib 
+        matplotlib.use('Agg') 
+        import pylab as plt    
+        from matplotlib.colors import LogNorm 
+        import pickle
+        assert utils.COMM.rank==0
+        with open('excitatory_matrix.p', 'wb') as handle:
+            pickle.dump(my_ecm, handle)
+        with open('inhibitory_matrix.p', 'wb') as handle:
+            pickle.dump(my_icm, handle)
+        print 'connection matrices saved'
+        fig = plt.figure()
+        fig.clf()
+    
+        im = plt.imshow(my_ecm, interpolation='nearest')
+    
+        plt.autoscale(True)
+        plt.colorbar(im)
+        plt.xlabel('columns = targets')
+        plt.ylabel('rows = sources')
+        plt.title('Ecitatory Adjacency Matrix')
+        plt.grid(True)
+    
+        sfin = str(SIZE) + ' ' + str(NCELL) + 'Excitatory_Adjacency_Matrix.png'
+        fig.savefig(sfin)
+        fig = plt.figure()
+        fig.clf()
+    
+        im = plt.imshow(my_icm, interpolation='nearest')
+    
+        plt.autoscale(True)
+        plt.colorbar(im)
+        plt.xlabel('columns = targets')
+        plt.ylabel('rows = sources')
+        plt.title('Inhibitory Adjacency Matrix')
+        plt.grid(True)
+    
+        sfin = str(SIZE) + ' ' + str(NCELL) + 'Inhibitory_Adjacency_Matrix.png'
+        fig.savefig(sfin)
        
     def prun(self,tstop):
         h=self.h    
@@ -480,10 +518,23 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             if len(data) != 0:
                 self.nestedpost(data)
         print('sums of connectivity\n')
+        
         return (self.nclist, self.ecm, self.icm)
 
         
     def tracenet(self):
+        '''
+        This method does two things.
+        1 Send a matrix to rank0.
+        2 Do a local hub node computation.
+        Ideally there should be too many neurons to properly visualise them in a network graph.
+        Future design decision. Keep rank0 free of cells, such that it has the RAM to store
+        big matrices.
+        # Then destroy after sending to rank 0.
+        # Maybe stimulate one cell per CPU.
+        #
+
+        '''
         ncsize=len(self.h.NetCon)
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -492,20 +543,26 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.matrix_reduce()
                
         lsoftup=[]
+        #
+        #
+        disposable=np.zeros(self.NCELL,self.NCELL)
         for i, j in enumerate(self.h.NetCon):
             if type(j)!=None:
                 assert type(j)!=None
                 srcind=int(j.srcgid())
                 tgtind=int(j.postcell().gid1)
+                
+                #oldindegree
+                #indegree=sum(disposable[srcind][tgtind])
+                #outdegree=sum(disposable[srcind][tgtind])
+                
                 print 'this is evidently not printing, some of these objects have been destroyed!'
                 print int(j.srcgid()),int(j.postcell().gid1),self.celldict[srcind],self.celldict[tgtind]
                 lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
         return lsoftup
       
-      
     def plotgraph(self):
-        assert self.COMM.rank==0
-
+        assert self.COMM.rank==0        
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
@@ -637,7 +694,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     def record_values(self):
         vec = { "v": [],
                 "t": self.h.Vector() }
-    
         for i, cell in enumerate(self.cells):
             vec["v"].append(self.h.Vector())
             vec["v"][i].record(cell.soma[0](0.5)._ref_v)

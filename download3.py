@@ -1,3 +1,15 @@
+from allensdk.core.mouse_connectivity_cache import MouseConnectivityCache
+
+# The manifest file is a simple JSON file that keeps track of all of
+# the data that has already been downloaded onto the hard drives.
+# If you supply a relative path, it is assumed to be relative to your
+# current working directory.
+mcc = MouseConnectivityCache(manifest_file='connectivity/manifest.json')
+
+# open up a list of all of the experiments
+all_experiments = mcc.get_experiments(dataframe=True)
+
+
 from allensdk.api.queries.biophysical_perisomatic_api import \
     BiophysicalPerisomaticApi
 

@@ -43,10 +43,13 @@ information=read_local_json()
 
 from utils import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=100)
+utils = Utils(config,NCELL=10)
 #This config file needs to have information about cells that actually is available.
 #NCELL=utils.NCELL=20
-assert utils.NCELL==100
+
+assert utils.NCELL==10
+
+
 
 ##
 # Move this business to utils.
@@ -55,15 +58,32 @@ assert utils.NCELL==100
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
-if COMM.rank==0:
+utils.h('forall{ for(x,0){ insert extracellular}}')    
+
+
+if utils.COMM.rank==0:
     utils.plotgraph()
-util.h.xopen("rigp.hoc")
+    utils.plot_save_matrix()
+    
+        
+    
+from rigp import NetStructure
+hubs=NetStructure(utils.ecm,utils.icm,utils.celldict)
+hubs.hubs()
+utils.setup_iclamp_step(amp, delay, dur)
+utils.record_values()
+#util.h.xopen("rigp.hoc")
 utils.prun(100)    
-
+#system.
+chtodir=os.getcwd()+"../../tigramite_1.3"
+os.chdir("/home/russell/tigramite_1.3")
+#if COMM.rank==0:
+#execfile('tigramite_gui.py')
 #utils.prun(10)
+#a=tigramite.Tigramite()
 
-
-
+#import http_server as hs
+#hs.load_url('force.json')
 
 #morphs,swclist,cells1=read_local_swc()        
 #cells1
