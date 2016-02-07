@@ -2,10 +2,9 @@ from allensdk.model.biophys_sim.neuron.hoc_utils import HocUtils
 import logging
 import glob
 from mpi4py import MPI
-
 import numpy as np
-
 import logging
+import networkx
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -31,6 +30,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     def __init__(self, description, NCELL=20):
       
         super(Utils, self).__init__(description)
+        # Logically the pc, and py object attributes of the HOC object should be initialized here too.
+        h=self.h  
+        h('objref pc, py')
+        h('pc = new ParallelContext()')
+        h('py = new PythonObject()')
+
         self.stim = None
         self.stim_curr = None
         self.sampling_rate = None
@@ -46,9 +51,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.celldict={}
         self.cellmorphdict={}
         self.nclist = []
+        self.seclists=[]
 
+        self.tvec=self.h.Vector()    
+        self.idvec=self.h.Vector() 
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
+        self.ecg = networkx.Graph()
+        self.icg = networkx.Graph()
         if self.RANK==0:        
             self.my_icm = np.zeros((self.NCELL, self.NCELL))
             self.my_ecm = np.zeros((self.NCELL, self.NCELL))
@@ -81,12 +91,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
 
     
-    def prep_list(self):                    
-        import pickle
-        allrows = pickle.load(open('allrows.p', 'rb'))
-        allrows.remove(allrows[0])#The first list element are the column titles. 
-        allrows2 = [i for i in allrows if int(len(i))>9 ]
-        return allrows2        
+   
 
 
 
@@ -108,7 +113,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                                         # method in ID, but this will do for now.
 
 
-
+    def prep_list(self):                    
+        import pickle
+        allrows = pickle.load(open('allrows.p', 'rb'))
+        allrows.remove(allrows[0])#The first list element are the column titles. 
+        allrows = [i for i in allrows if int(len(i))>9 ]
+        excitatory = [i for i in allrows if i[5]!="interneuron" ]        
+        interneurons = [i for i in allrows if i[5]=="interneuron" ]        
+        return (excitatory, interneurons)      
         
     def read_local_swc(self):
         h=self.h    
@@ -139,24 +151,16 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             morphology.root
             morphs.append(morphology)
         return morphs,swclist,cells1
-    
-    def gcs(self,NCELL):
-        """Instantiate NEURON cell Objects in the Python variable space, such that cell
-        that all cells have unique identifiers."""
+
+
+    def make_cells(self,polarity):
+        h=self.h    
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        h=self.h    
-        pc=h.ParallelContext()        
-        h('objref pc, py, nc, cells')
-        h('pc = new ParallelContext()')
-        h('py = new PythonObject()')
-        swcdict={}
-        NFILE = 3175
-        fit_ids = self.description.data['fit_ids'][0] #excitatory        
-        self.cells_data = self.description.data['biophys'][0]['cells']
-        info_swc=self.prep_list()
-        d = { x: y for x,y in enumerate(info_swc)}
+        #from neuron import h
+        pc=h.ParallelContext()
+d = { x: y for x,y in enumerate(polarity)}
         import os
         os.chdir(os.getcwd() + '/main')   
         itergids = iter( i for i in range(RANK, NCELL, SIZE) )
@@ -170,7 +174,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 cell.polarity=1
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            
-            #inhibitory cell.
+                #inhibitory cell.
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
 
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
@@ -181,6 +185,23 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
+    
+    def gcs(self,NCELL):
+        """Instantiate NEURON cell Objects in the Python variable space, such that cell
+        that all cells have unique identifiers."""
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        RANK=self.RANK
+        h=self.h    
+        pc=h.ParallelContext()     
+        h('objref nc, cells')
+        swcdict={}
+        NFILE = 3175
+        fit_ids = self.description.data['fit_ids'][0] #excitatory        
+        self.cells_data = self.description.data['biophys'][0]['cells']
+        excitatory, inhibitory =self.prep_list()
+        self.make_cells(inhibitory)
+        self.make_cells(excitatory)
         len(h.List('NetCon'))                        
         pol=[ a.polarity for a in self.cells ]       
         print np.sum(pol)
@@ -220,47 +241,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
         
-    def plot_save_matrix(self):    
-        import matplotlib 
-        matplotlib.use('Agg') 
-        import pylab as plt    
-        from matplotlib.colors import LogNorm 
-        import pickle
-        assert utils.COMM.rank==0
-        with open('excitatory_matrix.p', 'wb') as handle:
-            pickle.dump(my_ecm, handle)
-        with open('inhibitory_matrix.p', 'wb') as handle:
-            pickle.dump(my_icm, handle)
-        print 'connection matrices saved'
-        fig = plt.figure()
-        fig.clf()
-    
-        im = plt.imshow(my_ecm, interpolation='nearest')
-    
-        plt.autoscale(True)
-        plt.colorbar(im)
-        plt.xlabel('columns = targets')
-        plt.ylabel('rows = sources')
-        plt.title('Ecitatory Adjacency Matrix')
-        plt.grid(True)
-    
-        sfin = str(SIZE) + ' ' + str(NCELL) + 'Excitatory_Adjacency_Matrix.png'
-        fig.savefig(sfin)
-        fig = plt.figure()
-        fig.clf()
-    
-        im = plt.imshow(my_icm, interpolation='nearest')
-    
-        plt.autoscale(True)
-        plt.colorbar(im)
-        plt.xlabel('columns = targets')
-        plt.ylabel('rows = sources')
-        plt.title('Inhibitory Adjacency Matrix')
-        plt.grid(True)
-    
-        sfin = str(SIZE) + ' ' + str(NCELL) + 'Inhibitory_Adjacency_Matrix.png'
-        fig.savefig(sfin)
-       
+
     def prun(self,tstop):
         h=self.h    
         pc=h.ParallelContext()
@@ -430,7 +411,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
                 r = float(r)
-                if r < 10:  
+                if r < 25:  
                     
                     print r,# 'this is not hopefuly wiring everything to everything'
                     polarity = 0        
@@ -442,7 +423,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     if int(polarity) == int(0):
                         post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
                         self.icm[i][gidn] = self.icm[i][gidn] + 1
-                        print i,gidn
+                        self.icg.add_edge(i,gidn)
+                        self.icg.add_edge(i,gidn,weight=r/0.4)
+                        self.icg[i][gidn]['post_loc']=secnames
+
+                        #print i,gidn
                         assert np.sum(self.icm)!=0
   
                     else:
@@ -458,7 +443,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
                         
                         self.ecm[i][gidn] = self.ecm[i][gidn] + 1
-                        print i,gidn
+                        self.ecg.add_edge(i,gidn,weight=r/0.4)
+                        self.ecg[i][gidn]['post_loc']=secnames
+                        self.seclists.append(secnames)
+                        #print i,gidn
                         assert np.sum(self.ecm)!=0
     
                     h(post_syn)
@@ -520,8 +508,221 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         print('sums of connectivity\n')
         
         return (self.nclist, self.ecm, self.icm)
-
+    '''
+    def pre_cell(self,j):
+        """
         
+        This function searches for pre synaptic sources in the parallel wiring algorim
+        This algorithm includes the soma as proxy for other regions which can exocytosis
+        TODO: this algorithm is not currently limited to leaf nodes (such as dendrite sp
+        """
+        from neuron import h
+        pc=h.ParallelContext()
+        h=self.h   
+        coordictlist=[]
+        coordict={}
+        pc=h.pc
+        h('objref coords') 
+        h('coords = new Vector(3)')
+        if j in self.celldict.keys():
+            seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec )              
+            for (seg,sec, cellc) in seglist:
+                    get_cox = str('coords.x[0]=x_xtra('
+                                  + str(seg.x) + ')')
+                    h(get_cox)                   
+                    get_coy = str('coords.x[1]=y_xtra('
+                                  + str(seg.x) + ')')
+                    h(get_coy)
+                    get_coz = str('coords.x[2]=z_xtra('
+                                  + str(seg.x) + ')')
+                    h(get_coz)
+                    coordict['hostfrom']=pc.id()
+                    coordict['coords'] = np.array(h.coords.to_python(),
+                                              dtype=np.float64)
+                    coordict['gid']= int(j)
+                    coordict['seg']= seg.x                    
+                    secnames = sec.name()                         
+                    coordict['secnames'] = str(secnames)
+                    coordictlist.append(coordict)               
+        return coordictlist
+       
+    def post_cell(self,data):
+        """
+        This is the inner most loop of the parallel wiring algorithm.
+        13For ever GID
+        For every coordinate thats received from a broadcast.
+        for i,t in self.celldict.iteritems():
+        For ever GID thats on this host (in the dictionary)
+        if i in self.celldict.keys():
+        for k,i,t in iterdata :
+        if the gids are not the same.
+        Rule out self synapsing neurons (autopses), with the condition
+        pre GID != post GID
+        If the putative post synaptic gid exists on this CPU, the referen
+        tree.
+        My wiring algorithm uses HOC variables that interpolate the middl
+        some C libraries to achieve collision detection for synapse alloc
+        from neuromac.segment_distance import dist3D_segment_to_segment
+        from segment_distance import dist3D_segment_to_segment
+        and I am considering using them here also
+        """
+        from segment_distance import dist3D_segment_to_segment
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        from neuron import h
+        pc=h.ParallelContext()
+        h=self.h    
+        secnames = ''
+        cellind =0 
+        polarity = 0
+        h('objref coords')
+        h('coords = new Vector(3)')
+        h('objref pc')
+        h('pc = new ParallelContext()')        
+        h('objref coords2') 
+        h('coords2 = new Vector(3)')
+        iterdata=iter( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() )
+                 
+        for i,t in iterdata :                          
+            # call a tigrimite function here.
+            #
+            #
+            
+            iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
+            for seg,sec in iterseg:
+                #print seg.x, sec.name(), k['secnames']
+                h('objref cell1')
+                h('cell1=pc.gid2cell('+str(i)+')')
+                secnames = sec.name()
+                cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
+                h('insert xtra')
+                #h('for cell1.all{for(x,0){ insert xtra}}')    
+                h(str('coords2.x[2]=') + str('z_xtra(')
+                  + str(seg.x) + ')')
+                h(str('coords2.x[1]=') + str('y_xtra(')
+                  + str(seg.x) + ')')
+                h(str('coords2.x[0]=') + str('x_xtra(')
+                + str(seg.x) + ')')
+    
+                h('coordsx=0.0')
+                h.coordsx = k['coords'][0]
+                h('coordsy=0.0')
+                h.coordsy = k['coords'][1]
+                h('coordsz=0.0')
+                h.coordsz = k['coords'][2]
+    #h('coordsx') and coordsx are not tautolous they are
+    #One is a variable in the HOC space, the other is in
+    #coordsx from the Python space has been broadcast ov      
+                coordsx = float(k['coords'][0])
+                coordsy = float(k['coords'][1])
+                coordsz = float(k['coords'][2])
+    
+    #Find the euclidian distance between putative presynaptic segments, 
+    #and putative post synaptic segments.    
+    #If the euclidian distance is below an allowable threshold in micro 
+    #meters, continue on with code responsible for assigning a 
+    #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
+    
+    
+                r = 0.
+                import math
+                r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
+                gidn=k['gid']    
+                r = float(r)
+                if r < 10:  
+                    
+                    print r,# 'this is not hopefuly wiring everything to everything'
+                    polarity = 0        
+                    polarity=int(h.Cell[int(cellind)].polarity)
+                    print seg.x, k['seg'], k['secnames'], sec.name(), RANK, k['hostfrom'], k['gid'], int(h.Cell[int(cellind)].gid1)
+                    
+                    print polarity, 'polarity'
+                    h('objref syn_')        
+                    if int(polarity) == int(0):
+                        post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
+                        self.icm[i][gidn] = self.icm[i][gidn] + 1
+                        print i,gidn
+                        assert np.sum(self.icm)!=0
+  
+                    else:
+                        #TODO modify mod file for exp2syn such that cid exists.
+                        #Also because exp2syn is an inbuilt mechanism need to refactor explicitly such that custom file 
+                        #myexp2syn is used instead.
+                        #post_syn = secnames + ' ' + 'syn_ = new exp2syn(' + str(seg.x) + ')'
+                        #post_syn='syn_ = self.h.Exp2Syn('+str(seg.x)+',sec='+secnames+')'
+                        
+                        #syn_.e = connection["erev"]
+                        
+
+                        post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
+                        
+                        self.ecm[i][gidn] = self.ecm[i][gidn] + 1
+                        print i,gidn
+                        assert np.sum(self.ecm)!=0
+    
+                    h(post_syn)
+                    print post_syn
+                    h('print syn_')
+                    syn_=h.syn_
+                    h.syn_.cid=i
+                    h.Cell[cellind].ampalist.append(h.syn_)
+                    h.Cell[cellind].div.append(k['gid'])
+                    h.Cell[cellind].gvpre.append(k['gid'])
+                    nc=pc.gid_connect(k['gid'],syn_)                                        
+                    nc.delay=1+r/0.4
+                    nc.weight[0]=r/0.4    
+                    self.nclist.append(nc)
+                    
+                    #source_section = source_cell.soma[0]
+                    
+                    #Below syntax wont work on a parallel architecture.
+                    #nc = self.h.NetCon(source_section(0.5)._ref_v, syn, sec=source_section)
+                    #nc.weight[0] = connection["weight"]
+                    nc.threshold = -20
+                    nc.delay = 2.0
+
+                    #logger.debug('This is a critical message.',nc, self.ecm, self.icm)
+                    #logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
+
+            #h('uninsert xtra')                          
+        #return self.nclist, self.ecm, self.icm
+    
+    def te_between(self):
+        """This function constitutes the outermost loop of the parallel wiring algor
+        The function returns two adjacency matrices. One matrix whose elements are excitatory connections and another matrix of inhibitory connections"""
+        from segment_distance import dist3D_segment_to_segment
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        h=self.h    
+        pc=h.ParallelContext()
+        secnames = ''
+        cellind =0 
+        polarity = 0
+        h('objref coords')
+        h('coords = new Vector(3)')
+        h('objref pc')
+        h('pc = new ParallelContext()')        
+        coordict=None
+        coordictlist=None
+        #Iterate over all CPU ranks, iterate through all GIDs (global 
+        #identifiers, stored in the python dictionary).
+        for s in xrange(0, SIZE):
+            celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
+            for (i,j) in celliter:  
+                cell1=pc.gid2cell(i)
+                coordictlist=self.precell(i)
+            data = COMM.bcast(coordictlist, root=s)  # ie root = rank
+            if len(data) != 0:
+                self.postcell(data)
+        print('sums of connectivity\n')
+        
+        return (self.nclist, self.ecm, self.icm)
+
+    '''    
     def tracenet(self):
         '''
         This method does two things.
@@ -545,7 +746,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         lsoftup=[]
         #
         #
-        disposable=np.zeros(self.NCELL,self.NCELL)
+        #disposable=np.zeros(self.NCELL,self.NCELL)
         for i, j in enumerate(self.h.NetCon):
             if type(j)!=None:
                 assert type(j)!=None
@@ -566,9 +767,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        import http_server  
+        #import http_server  
         G=nx.from_numpy_matrix(self.my_ecm)
-        d = json_graph.node_link_data(G)            
+        d = json_graph.node_link_data(G)     
+        t = json_graph.json_graph.tree_graph(G)       
         json.dump(d, open('force/force.json','w'))
         print('Wrote node-link JSON data to force/force.json')
         # open URL in running web browser
@@ -692,16 +894,37 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.stim.dur = dur
 
     def record_values(self):
-        vec = { "v": [],
+        vec = { "v": {}, #define a dictionary.
                 "t": self.h.Vector() }
         for i, cell in enumerate(self.cells):
-            vec["v"].append(self.h.Vector())
-            vec["v"][i].record(cell.soma[0](0.5)._ref_v)
+            vec["v"][int(cell.gid1)]=self.h.Vector()
+            vec["v"][int(cell.gid1)].record(cell.soma[0](0.5)._ref_v)
         vec["t"].record(self.h._ref_t)
     
         return vec
-        
-        
+  
+    def spikerecord(self):   
+        for cell in self.cells:
+            self.h.pc.spike_record(int(cell.gid1), self.tvec, self.idvec)
+
+
+    '''
+    def proc spikeout(self):   
+        self.COMM.barrier()# // wait for all hosts to get to this point
+        if (self.COMM.rank==0):
+            print("\ntime\t cell\n") #// print header once
+    
+        for rank in xrange(0,self.COMM.size): #{ // host 0 first, then 1, 2, etc.
+            if (rank==self.COMM.rank):
+                print(fno,"%s_spt.dat", fstem)
+                fo = new File(fno)  
+                fo.aopen()
+                for i in len(tvec)#.size-1:   
+                    printf ("%g\t %d\n", tvec.x[i], idvec.x[i])
+                    fo.printf("%g\t %d\n", tvec.x[i], idvec.x[i])
+                fo.close()
+        self.COMM.barrier()
+    '''                   
     def wirecells_s(self):
         '''wire cells on the same hosts'''
         NCELL=self.NCELL

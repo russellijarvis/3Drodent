@@ -16,7 +16,7 @@ import glob
 from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
 import d3py
-
+import pickle
 
 
 
@@ -25,12 +25,15 @@ bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 
 #Above and below are the same. Above is online version, below is offline version that acts on local files.
 #Use the other methods in the biophysical_perisomatic_api to one by one do the things needed to cache whole models.
+
+'''
 def read_local_json():
     from allensdk.api import api
     f1= open('neuron_models_from_query_builder.json')
     information = api.load(f1)
     return information
 information=read_local_json()
+'''
 
 #bp.cache_data(395310469, working_directory='neuronal_model')
 #for i in information['msg']:    
@@ -40,40 +43,47 @@ information=read_local_json()
 #Excitatory and inhibitory cells are categorised according to the suffix's listed below:
 #Pvalb:  Inhibitory aspiny cells (i.e. it clustered the fast-spiking Pvalb cells)
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
-
+#CRE virus connectivity?
 from utils import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=10)
-#This config file needs to have information about cells that actually is available.
-#NCELL=utils.NCELL=20
-
-assert utils.NCELL==10
-
-
-
-##
-# Move this business to utils.
-## 
-#morphs,swclist,cells1=utils.read_local_swc() 
+utils = Utils(config,NCELL=4000)
 info_swc=utils.gcs(utils.NCELL)
+'''
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
-utils.h('forall{ for(x,0){ insert extracellular}}')    
+utils.h('forall{ for(x,0){ uninsert xtra}}')    
 
+
+from rigp import NetStructure
+hubs=NetStructure(utils.ecm,utils.icm,utils.celldict)
+print 'experimental rig'
+hubs.hubs()
 
 if utils.COMM.rank==0:
     utils.plotgraph()
-    utils.plot_save_matrix()
-    
-        
-    
-from rigp import NetStructure
-hubs=NetStructure(utils.ecm,utils.icm,utils.celldict)
-hubs.hubs()
-utils.setup_iclamp_step(amp, delay, dur)
-utils.record_values()
+    hubs.save_matrix()
+
+#In addition to stimulating the out degree hub, stimulate the first cell on each host,
+#To make activity more likely.
+utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
+
+# configure recording
+utils.spikerecord()
+
+vec = utils.record_values()
+
+#utils.h.dt = 0.025
 #util.h.xopen("rigp.hoc")
-utils.prun(100)    
+tstop = 3000
+utils.COMM.barrier()
+
+
+utils.prun(tstop)
+
+
+#with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
+#       pickle.dump(vec, handle)    
+
 #system.
 chtodir=os.getcwd()+"../../tigramite_1.3"
 os.chdir("/home/russell/tigramite_1.3")
@@ -95,3 +105,4 @@ def mkjson(): #Only ascii as in dictionary contents
         write(str(m)+'.json',m.root)
     return 0
 
+'''
