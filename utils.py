@@ -190,6 +190,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0
+            
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
@@ -316,73 +317,58 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         This function searches for pre synaptic sources in the parallel wiring algorim
         This algorithm includes the soma as proxy for other regions which can exocytosis
         TODO: this algorithm is not currently limited to leaf nodes (such as dendrite sp
+        
+        Is this routine synchonous.
+        
         """
+
         from neuron import h
         pc=h.ParallelContext()
         h=self.h   
-        coordictlist=[]
-        coordict={}
+        shiplist=[]
+        #coordict={}
         pc=h.pc
         h('objref coords') 
         h('coords = new Vector(3)')
         if j in self.celldict.keys():
-            #seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec )              
-            #seglist= [ (seg, sec, self.celldict[j]) 
-            cell=self.h.pc.gid2cell(j)
-            
-            multiline='''forsec pc.gid2cell('''+str(j)+''').spk_trig_ls{  
-                for(x,0){ 
-                 print secname()
-                 //x_xtra()
-                    
-                }
-            }
-            '''
-            h(multiline)
-            
-#                     get_cox = str('coords.x[0]=x_xtra('
-#                                   + str('''str(x)''') + ')')
-#                     h(get_cox)                   
-#                     get_coy = str('coords.x[1]=y_xtra('
-#                                   + str('''str(x)''') + ')')
-#                     h(get_coy)
-#                     get_coz = str('coords.x[2]=z_xtra('
-#                                   + str('''str(x)''') + ')')
-#                     h(get_coz)
-#                     coordict['hostfrom']=pc.id()
-#                     coordict['coords'] = np.array(h.coords.to_python(),
-#                                               dtype=np.float64)
-#                     coordict['gid']= int(j)
-#                     coordict['seg']= seg.x                    
-#                     secnames = sec.name()                         
-#                     coordict['secnames'] = str(secnames)
-#                     coordictlist.append(coordict)             
+            seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls.allsec() for seg in sec )              
+            #for sec in self.celldict[j].spk_trig_ls.allsec():
+               #for seg in sec:
+            print type(seglist)#, len(seglist)
+            for (seg,sec, cellc) in seglist:
 
-            
-#             for sec in self.celldict[j].spk_trig_ls:
-#               
-#                 for seg in sec:               
-#                     #for (seg,sec, cellc) in seglist:
-#                     get_cox = str('coords.x[0]=x_xtra('
-#                                   + str(seg.x) + ')')
-#                     h(get_cox)                   
-#                     get_coy = str('coords.x[1]=y_xtra('
-#                                   + str(seg.x) + ')')
-#                     h(get_coy)
-#                     get_coz = str('coords.x[2]=z_xtra('
-#                                   + str(seg.x) + ')')
-#                     h(get_coz)
-#                     coordict['hostfrom']=pc.id()
-#                     coordict['coords'] = np.array(h.coords.to_python(),
-#                                               dtype=np.float64)
-#                     coordict['gid']= int(j)
-#                     coordict['seg']= seg.x                    
-#                     secnames = sec.name()                         
-#                     coordict['secnames'] = str(secnames)
-#                     coordictlist.append(coordict)               
-        pdb.set_trace()
+            #for (seg, sec) in seglist:
+                sec.push()
+                sec.nseg
+                #for (seg,sec, cellc) in seglist:
+                get_cox = str('coords.x[0]=x_xtra('
+                              + str(seg.x) + ')')
+                h(get_cox)                   
+                get_coy = str('coords.x[1]=y_xtra('
+                              + str(seg.x) + ')')
+                h(get_coy)
+                get_coz = str('coords.x[2]=z_xtra('
+                              + str(seg.x) + ')')
+                h(get_coz)
+                coordict={} #Destroy dictionary some-how.
+                            #This is a pointer problem.
+                coordict['hostfrom'] = pc.id()
+                coordict['coords'] = np.array(h.coords.to_python(),
+                                          dtype=np.float64)
+                coordict['gid']= int(j)
+                coordict['seg']= seg.x                    
+                secnames = self.h.cas().name()#sec.name()  
+                #print secnames, seg.x                       
+                #shiplist.append((secnames,seg.x))
+                coordict['secnames'] = str(secnames)
+                shiplist.append(coordict)
+                self.h.pop_section()
+               
+        #pdb.set_trace()
+        return shiplist
+
+
         
-        return coordictlist
        
     def nestedpost(self,data):
         """
@@ -422,11 +408,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref coords2') 
         h('coords2 = new Vector(3)')
         #iterdata=iter( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']))
-        iterdata=[ (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) ]
+        iterdata=( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )
                  
         for k,i,t in iterdata :                          
             #iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
-            iterseg=[ (seg,sec) for sec in t.spk_rx_ls for seg in sec ]                    
+            iterseg=( (seg,sec) for sec in t.spk_rx_ls.allsec() for seg in sec )                    
             
             for seg,sec in iterseg:
                 #print seg.x, sec.name(), k['secnames']
@@ -467,18 +453,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 import math
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
-                r = float(r)
-                if r < 10:
+                r = float(r)    
+                if r < 1:
                       
                     
                     print r, 'the distance'# 'this is not hopefuly wiring everything to everything'
                     polarity = 0        
                     polarity=int(h.Cell[int(cellind)].polarity)
                     #Pdb.set_trace()
-                    pdb.set_trace()
+                    #pdb.set_trace()
                     print seg.x, ' local seg.x ', k['seg'], ' recieved seg ' 
                     print sec.name(), ' local section ', k['secnames'], ' received section '
-                    print RANK, k['hostfrom'], k['gid'], int(h.Cell[int(cellind)].gid1)
+                    print 'host on ', RANK, 'host from ', k['hostfrom'], ' shipped gid ', k['gid'], ' local gid ', int(h.Cell[int(cellind)].gid1)
                         #assert k['seg']!=0.5
                     print polarity, 'polarity'
                     h('objref syn_')        
@@ -853,8 +839,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         for seg in cell.soma[0]:
             seg.area()
 
-        for sec in cell.all:
+        for sec in cell.all.allsec():
             sec.nseg = 1 + 2 * int(sec.L / 40)
+        h.define_shape()
         
         #cell.simplify_axon()
         #for sec in cell.axonal:
@@ -863,7 +850,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #    sec.nseg = 1 + 2 * int(sec.L / 40)
         #cell.axon[0].connect(cell.soma[0], 0.5, 0)
         #cell.axon[1].connect(cell.axon[0], 1, 0)
-        h.define_shape()
     
     def load_cell_parameters(self, cell, type_index):
         h=self.h
@@ -873,7 +859,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         # Set passive properties
         cm_dict = dict([(c['section'], c['cm']) for c in passive['cm']])
-        for sec in cell.all:
+        for sec in cell.all.allsec():
             sec.Ra = passive['ra']
             sec.cm = cm_dict[sec.name().split(".")[1][:4]]
             sec.insert('pas')
@@ -882,16 +868,17 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         # Insert channels and set parameters
         for p in genome:
-            sections = [s for s in cell.all if s.name().split(".")[1][:4] == p["section"]]
+            sections = [s for s in cell.all.allsec() if s.name().split(".")[1][:4] == p["section"]]
             for sec in sections:
+                sec.push()
                 if p["mechanism"] != "":
                     sec.insert(p["mechanism"])
                     h('print psection()')
                 setattr(sec, p["name"], p["value"])
-        
+                self.h.pop_section()
         # Set reversal potentials
         for erev in conditions['erev']:
-            sections = [s for s in cell.all if s.name().split(".")[1][:4] == erev["section"]]
+            sections = [s for s in cell.all.allsec() if s.name().split(".")[1][:4] == erev["section"]]
             for sec in sections:
                 sec.ena = erev["ena"]
                 sec.ek = erev["ek"]
@@ -1003,8 +990,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             cell1=pc.gid2cell(i)            
             coordictlist=self.nestedpre(j)
             for coordict in coordictlist:    
-                seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_rx_ls for seg in sec )                          
+                seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_rx_ls.allsec() for seg in sec )                          
                 for (seg, sec, cellc) in seglist:
+                    sec.push()
                     secnames = sec.name()
                    
                     cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
