@@ -408,19 +408,28 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref coords2') 
         h('coords2 = new Vector(3)')
         #iterdata=iter( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']))
-        iterdata=( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )
-                 
-        for k,i,t in iterdata :                          
+        #iterdata=( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )
+        iterdata=iter(data)
+        k={}
+        k=iterdata.next()             
+        itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
+        for i,t in itercell :                          
+            #pdb.set_trace()
+                    
             #iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
             iterseg=( (seg,sec) for sec in t.spk_rx_ls.allsec() for seg in sec )                    
             
             for seg,sec in iterseg:
-                #print seg.x, sec.name(), k['secnames']
+                sec.push()
+                
+                print seg.x, sec.name(), k['secnames']
+                pdb.set_trace()
+                
                 h('objref cell1')
                 h('cell1=pc.gid2cell('+str(i)+')')
                 secnames = sec.name()
                 cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
-                h('insert xtra')
+                #h('insert xtra')
                 #h('for cell1.all{for(x,0){ insert xtra}}')    
                 h(str('coords2.x[2]=') + str('z_xtra(')
                   + str(seg.x) + ')')
@@ -441,14 +450,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 coordsx = float(k['coords'][0])
                 coordsy = float(k['coords'][1])
                 coordsz = float(k['coords'][2])
-    
-    #Find the euclidian distance between putative presynaptic segments, 
-    #and putative post synaptic segments.    
-    #If the euclidian distance is below an allowable threshold in micro 
-    #meters, continue on with code responsible for assigning a 
-    #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
-    
-    
+      
+      #Find the euclidian distance between putative presynaptic segments, 
+      #and putative post synaptic segments.    
+      #If the euclidian distance is below an allowable threshold in micro 
+      #meters, continue on with code responsible for assigning a 
+      #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
+      
+      
                 r = 0.
                 import math
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
@@ -461,7 +470,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     polarity = 0        
                     polarity=int(h.Cell[int(cellind)].polarity)
                     #Pdb.set_trace()
-                    #pdb.set_trace()
                     print seg.x, ' local seg.x ', k['seg'], ' recieved seg ' 
                     print sec.name(), ' local section ', k['secnames'], ' received section '
                     print 'host on ', RANK, 'host from ', k['hostfrom'], ' shipped gid ', k['gid'], ' local gid ', int(h.Cell[int(cellind)].gid1)
@@ -475,7 +483,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         self.icg.add_edge(i,gidn,weight=r/0.4)
                         self.icg[i][gidn]['post_loc']=secnames
                         assert np.sum(self.icm)!=0
-  
+                
                     else:
                         #TODO modify mod file for exp2syn such that cid exists.
                         #Also because exp2syn is an inbuilt mechanism need to refactor explicitly such that custom file 
@@ -497,7 +505,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                             self.ecg[i][gidn]['post_loc']=secnames
                             self.seclists.append(secnames)
                             assert np.sum(self.ecm)!=0
-    
+                
                     h(post_syn)
                     print post_syn
                     h('print syn_')
@@ -510,21 +518,22 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     nc.delay=1+r/0.4
                     nc.weight[0]=r/0.4    
                     self.nclist.append(nc)
-                    
+                    self.h.pop_section()
+               
                     #source_section = source_cell.soma[0]
-                    
+                  
                     #Below syntax wont work on a parallel architecture.
                     #nc = self.h.NetCon(source_section(0.5)._ref_v, syn, sec=source_section)
                     #nc.weight[0] = connection["weight"]
                     nc.threshold = -20
                     nc.delay = 2.0
+                
+                      #logger.debug('This is a critical message.',nc, self.ecm, self.icm)
+                      #logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
+                
+                #h('uninsert xtra')                          
+                #return self.nclist, self.ecm, self.icm
 
-                    #logger.debug('This is a critical message.',nc, self.ecm, self.icm)
-                    #logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
-
-            #h('uninsert xtra')                          
-        #return self.nclist, self.ecm, self.icm
-    
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
         The function returns two adjacency matrices. One matrix whose elements are excitatory connections and another matrix of inhibitory connections"""
