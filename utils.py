@@ -5,7 +5,6 @@ from mpi4py import MPI
 import numpy as np
 import logging
 import networkx
-
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s - %(funcName)s - %(lineno)d')
@@ -20,7 +19,9 @@ import unittest
 #ontology it is supposed to represent.
 #
 
-from pdb import Pdb
+#from pdb import Pdb
+import pdb as pdb
+
 import neuroelectro
 
 class Utils(HocUtils):#search multiple inheritance unittest.
@@ -325,25 +326,62 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref coords') 
         h('coords = new Vector(3)')
         if j in self.celldict.keys():
-            seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec )              
-            for (seg,sec, cellc) in seglist:
-                    get_cox = str('coords.x[0]=x_xtra('
-                                  + str(seg.x) + ')')
-                    h(get_cox)                   
-                    get_coy = str('coords.x[1]=y_xtra('
-                                  + str(seg.x) + ')')
-                    h(get_coy)
-                    get_coz = str('coords.x[2]=z_xtra('
-                                  + str(seg.x) + ')')
-                    h(get_coz)
-                    coordict['hostfrom']=pc.id()
-                    coordict['coords'] = np.array(h.coords.to_python(),
-                                              dtype=np.float64)
-                    coordict['gid']= int(j)
-                    coordict['seg']= seg.x                    
-                    secnames = sec.name()                         
-                    coordict['secnames'] = str(secnames)
-                    coordictlist.append(coordict)               
+            #seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec )              
+            #seglist= [ (seg, sec, self.celldict[j]) 
+            cell=self.h.pc.gid2cell(j)
+            
+            multiline='''forsec pc.gid2cell('''+str(j)+''').spk_trig_ls{  
+                for(x,0){ 
+                 print secname()
+                 //x_xtra()
+                    
+                }
+            }
+            '''
+            h(multiline)
+            
+#                     get_cox = str('coords.x[0]=x_xtra('
+#                                   + str('''str(x)''') + ')')
+#                     h(get_cox)                   
+#                     get_coy = str('coords.x[1]=y_xtra('
+#                                   + str('''str(x)''') + ')')
+#                     h(get_coy)
+#                     get_coz = str('coords.x[2]=z_xtra('
+#                                   + str('''str(x)''') + ')')
+#                     h(get_coz)
+#                     coordict['hostfrom']=pc.id()
+#                     coordict['coords'] = np.array(h.coords.to_python(),
+#                                               dtype=np.float64)
+#                     coordict['gid']= int(j)
+#                     coordict['seg']= seg.x                    
+#                     secnames = sec.name()                         
+#                     coordict['secnames'] = str(secnames)
+#                     coordictlist.append(coordict)             
+
+            
+#             for sec in self.celldict[j].spk_trig_ls:
+#               
+#                 for seg in sec:               
+#                     #for (seg,sec, cellc) in seglist:
+#                     get_cox = str('coords.x[0]=x_xtra('
+#                                   + str(seg.x) + ')')
+#                     h(get_cox)                   
+#                     get_coy = str('coords.x[1]=y_xtra('
+#                                   + str(seg.x) + ')')
+#                     h(get_coy)
+#                     get_coz = str('coords.x[2]=z_xtra('
+#                                   + str(seg.x) + ')')
+#                     h(get_coz)
+#                     coordict['hostfrom']=pc.id()
+#                     coordict['coords'] = np.array(h.coords.to_python(),
+#                                               dtype=np.float64)
+#                     coordict['gid']= int(j)
+#                     coordict['seg']= seg.x                    
+#                     secnames = sec.name()                         
+#                     coordict['secnames'] = str(secnames)
+#                     coordictlist.append(coordict)               
+        pdb.set_trace()
+        
         return coordictlist
        
     def nestedpost(self,data):
@@ -383,10 +421,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('pc = new ParallelContext()')        
         h('objref coords2') 
         h('coords2 = new Vector(3)')
-        iterdata=iter( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']))
+        #iterdata=iter( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']))
+        iterdata=[ (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) ]
                  
         for k,i,t in iterdata :                          
-            iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
+            #iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
+            iterseg=[ (seg,sec) for sec in t.spk_rx_ls for seg in sec ]                    
+            
             for seg,sec in iterseg:
                 #print seg.x, sec.name(), k['secnames']
                 h('objref cell1')
@@ -427,13 +468,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
                 r = float(r)
-                if r < 10:  
+                if r < 10:
+                      
                     
-                    print r,# 'this is not hopefuly wiring everything to everything'
+                    print r, 'the distance'# 'this is not hopefuly wiring everything to everything'
                     polarity = 0        
                     polarity=int(h.Cell[int(cellind)].polarity)
-                    print seg.x, k['seg'], k['secnames'], sec.name(), RANK, k['hostfrom'], k['gid'], int(h.Cell[int(cellind)].gid1)
-                    
+                    #Pdb.set_trace()
+                    pdb.set_trace()
+                    print seg.x, ' local seg.x ', k['seg'], ' recieved seg ' 
+                    print sec.name(), ' local section ', k['secnames'], ' received section '
+                    print RANK, k['hostfrom'], k['gid'], int(h.Cell[int(cellind)].gid1)
+                        #assert k['seg']!=0.5
                     print polarity, 'polarity'
                     h('objref syn_')        
                     if int(polarity) == int(0):

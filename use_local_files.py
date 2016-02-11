@@ -46,16 +46,15 @@ information=read_local_json()
 #CRE virus connectivity?
 from utils import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=4000)
+utils = Utils(config,NCELL=100)
 info_swc=utils.gcs(utils.NCELL)
-'''
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 
 
 from rigp import NetStructure
-hubs=NetStructure(utils.ecm,utils.icm,utils.celldict)
+hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
 print 'experimental rig'
 hubs.hubs()
 
@@ -105,4 +104,3 @@ def mkjson(): #Only ascii as in dictionary contents
         write(str(m)+'.json',m.root)
     return 0
 
-'''
