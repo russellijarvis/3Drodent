@@ -119,8 +119,19 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         allrows.remove(allrows[0])#The first list element are the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
         excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        interneurons = [i for i in allrows if i[5]=="interneuron" ]        
-        return (excitatory, interneurons)      
+        interneurons = [i for i in allrows if i[5]=="interneuron" ]     
+        #bothtrans = [y for x,y in enumerate(excitatory)
+        bothtrans=[]
+        if len(excitatory) > len(interneurons):
+            length=len(interneurons)
+        else:
+            length=len(excitatory)
+        for i in xrange(0,length):
+            if ((i%2)==0):
+                bothtrans.append(interneurons[i]) 
+            else:
+                bothtrans.append(excitatory[i])
+        return bothtrans#(excitatory, interneurons)      
         
     def read_local_swc(self):
         h=self.h    
@@ -160,10 +171,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         #from neuron import h
         pc=h.ParallelContext()
-d = { x: y for x,y in enumerate(polarity)}
-        import os
-        os.chdir(os.getcwd() + '/main')   
-        itergids = iter( i for i in range(RANK, NCELL, SIZE) )
+        d = { x: y for x,y in enumerate(polarity)}         
+        itergids = iter( i for i in range(RANK, NCELL, SIZE) )        
+        fit_ids = self.description.data['fit_ids'][0] #excitatory        
         for i in itergids:
             cell = h.mkcell(d[i][3])
             cell.geom_nseg()
@@ -189,6 +199,7 @@ d = { x: y for x,y in enumerate(polarity)}
     def gcs(self,NCELL):
         """Instantiate NEURON cell Objects in the Python variable space, such that cell
         that all cells have unique identifiers."""
+   
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
@@ -199,9 +210,14 @@ d = { x: y for x,y in enumerate(polarity)}
         NFILE = 3175
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         self.cells_data = self.description.data['biophys'][0]['cells']
-        excitatory, inhibitory =self.prep_list()
-        self.make_cells(inhibitory)
-        self.make_cells(excitatory)
+        bothtrans =self.prep_list()
+        #bothtrans=[]
+        #bothtrans.extend(inhibitory)
+        #bothtrans.extend(excitatory)
+
+        import os
+        os.chdir(os.getcwd() + '/main')  
+        self.make_cells(bothtrans)
         len(h.List('NetCon'))                        
         pol=[ a.polarity for a in self.cells ]       
         print np.sum(pol)
@@ -411,7 +427,7 @@ d = { x: y for x,y in enumerate(polarity)}
                 r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                 gidn=k['gid']    
                 r = float(r)
-                if r < 25:  
+                if r < 10:  
                     
                     print r,# 'this is not hopefuly wiring everything to everything'
                     polarity = 0        
@@ -426,8 +442,6 @@ d = { x: y for x,y in enumerate(polarity)}
                         self.icg.add_edge(i,gidn)
                         self.icg.add_edge(i,gidn,weight=r/0.4)
                         self.icg[i][gidn]['post_loc']=secnames
-
-                        #print i,gidn
                         assert np.sum(self.icm)!=0
   
                     else:
@@ -435,19 +449,22 @@ d = { x: y for x,y in enumerate(polarity)}
                         #Also because exp2syn is an inbuilt mechanism need to refactor explicitly such that custom file 
                         #myexp2syn is used instead.
                         #post_syn = secnames + ' ' + 'syn_ = new exp2syn(' + str(seg.x) + ')'
-                        #post_syn='syn_ = self.h.Exp2Syn('+str(seg.x)+',sec='+secnames+')'
-                        
+                        #post_syn='syn_ = self.h.Exp2Syn('+str(seg.x)+',sec='+secnames+')'                        
                         #syn_.e = connection["erev"]
-                        
-
-                        post_syn = secnames + ' ' + 'syn_ = new AMPA(' + str(seg.x) + ')'
-                        
-                        self.ecm[i][gidn] = self.ecm[i][gidn] + 1
-                        self.ecg.add_edge(i,gidn,weight=r/0.4)
-                        self.ecg[i][gidn]['post_loc']=secnames
-                        self.seclists.append(secnames)
-                        #print i,gidn
-                        assert np.sum(self.ecm)!=0
+                        if (k['gid']%2==0):
+                            post_syn = secnames + ' ' + 'syn_ = new ExpSid(' + str(seg.x) + ')'                       
+                            self.ecm[i][gidn] = self.ecm[i][gidn] + 1
+                            self.ecg.add_edge(i,gidn,weight=r/0.4)
+                            self.ecg[i][gidn]['post_loc']=secnames
+                            self.seclists.append(secnames)
+                            assert np.sum(self.ecm)!=0
+                        else:
+                            post_syn = secnames + ' ' + 'syn_ = new NMDA(' + str(seg.x) + ')'                       
+                            self.ecm[i][gidn] = self.ecm[i][gidn] + 1
+                            self.ecg.add_edge(i,gidn,weight=r/0.4)
+                            self.ecg[i][gidn]['post_loc']=secnames
+                            self.seclists.append(secnames)
+                            assert np.sum(self.ecm)!=0
     
                     h(post_syn)
                     print post_syn
