@@ -331,7 +331,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref coords') 
         h('coords = new Vector(3)')
         if j in self.celldict.keys():
-            seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls.allsec() for seg in sec )              
+            #seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls() for seg in sec )     
+            seglist= [ (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec ]              
+         
             for (seg,sec, cellc) in seglist:
 
             #for (seg, sec) in seglist:
@@ -416,16 +418,16 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #Dictionaries need to be redeclared before they can become updated!
             #k=iterdata.next()
             #assert k!=kold
-            print segxold, 'segxold!=seg.x' 
-            print secold, 'secold!=sec.name()'
-            print k
+            #print segxold, 'segxold!=seg.x' 
+            #print secold, 'secold!=sec.name()'
+            #print k
        
             kold=k                    
             itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
             for i,t in itercell :                          
                 #       
                 #iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
-                iterseg=[ (seg,sec) for sec in t.spk_rx_ls.allsec() for seg in sec ]                    
+                iterseg=[ (seg,sec) for sec in t.spk_rx_ls for seg in sec ]                    
                 for (seg,sec) in iterseg:
                 #for index in xrange(0,len(iterseg)-1):
                 #while seg,sec=iterseg.next():
@@ -862,7 +864,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         for seg in cell.soma[0]:
             seg.area()
 
-        for sec in cell.all.allsec():
+        for sec in cell.all():
             sec.nseg = 1 + 2 * int(sec.L / 40)
         h.define_shape()
         
@@ -882,7 +884,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         # Set passive properties
         cm_dict = dict([(c['section'], c['cm']) for c in passive['cm']])
-        for sec in cell.all.allsec():
+        for sec in cell.all:
             sec.Ra = passive['ra']
             sec.cm = cm_dict[sec.name().split(".")[1][:4]]
             sec.insert('pas')
@@ -891,7 +893,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         # Insert channels and set parameters
         for p in genome:
-            sections = [s for s in cell.all.allsec() if s.name().split(".")[1][:4] == p["section"]]
+            sections = [s for s in cell.all if s.name().split(".")[1][:4] == p["section"]]
             for sec in sections:
                 sec.push()
                 if p["mechanism"] != "":
@@ -901,7 +903,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 self.h.pop_section()
         # Set reversal potentials
         for erev in conditions['erev']:
-            sections = [s for s in cell.all.allsec() if s.name().split(".")[1][:4] == erev["section"]]
+            sections = [s for s in cell.all if s.name().split(".")[1][:4] == erev["section"]]
             for sec in sections:
                 sec.ena = erev["ena"]
                 sec.ek = erev["ek"]
@@ -1013,7 +1015,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             cell1=pc.gid2cell(i)            
             coordictlist=self.nestedpre(j)
             for coordict in coordictlist:    
-                seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_rx_ls.allsec() for seg in sec )                          
+                seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_rx_ls() for seg in sec )                          
                 for (seg, sec, cellc) in seglist:
                     sec.push()
                     secnames = sec.name()
