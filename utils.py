@@ -310,18 +310,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             print 'runtime = %g' % runtime
         print comptime, exchtime, splittime, gaptime
 
-   
-    def nestedpre(self,j):
-        """
-        
-        This function searches for pre synaptic sources in the parallel wiring algorim
-        This algorithm includes the soma as proxy for other regions which can exocytosis
-        TODO: this algorithm is not currently limited to leaf nodes (such as dendrite sp
-        
-        Is this routine synchonous.
-        
-        """
 
+    def nestedpre_test(self,j):
         from neuron import h
         pc=h.ParallelContext()
         h=self.h   
@@ -330,6 +320,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pc=h.pc
         h('objref coords') 
         h('coords = new Vector(3)')
+        #self.celldict.items()[0]
         if j in self.celldict.keys():
             #seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls() for seg in sec )     
             seglist= [ (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec ]              
@@ -362,6 +353,61 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 coordict['secnames'] = str(secnames)
                 shiplist.append(coordict)
                 self.h.pop_section()
+               
+        #pdb.set_trace()
+        return shiplist
+        
+    def nestedpre(self,j):
+        """
+        
+        This function searches for pre synaptic sources in the parallel wiring algorim
+        This algorithm includes the soma as proxy for other regions which can exocytosis
+        TODO: this algorithm is not currently limited to leaf nodes (such as dendrite sp
+        
+        Is this routine synchonous.
+        
+        """
+
+        from neuron import h
+        pc=h.ParallelContext()
+        h=self.h   
+        shiplist=[]
+        #coordict={}
+        pc=h.pc
+        h('objref coords') 
+        h('coords = new Vector(3)')
+        if j in self.celldict.keys():
+            seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls() for seg in sec )     
+            #seglist= [ (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec ]              
+         
+            for (seg,sec, cellc) in seglist:
+
+            #for (seg, sec) in seglist:
+                #sec.push()
+                #sec.nseg
+                #for (seg,sec, cellc) in seglist:
+                get_cox = str('coords.x[0]=x_xtra('
+                              + str(seg.x) + ')')
+                h(get_cox)                   
+                get_coy = str('coords.x[1]=y_xtra('
+                              + str(seg.x) + ')')
+                h(get_coy)
+                get_coz = str('coords.x[2]=z_xtra('
+                              + str(seg.x) + ')')
+                h(get_coz)
+                coordict={} #Destroy dictionary some-how.
+                            #This is a pointer problem.
+                coordict['hostfrom'] = pc.id()
+                coordict['coords'] = np.array(h.coords.to_python(),
+                                          dtype=np.float64)
+                coordict['gid']= int(j)
+                coordict['seg']= seg.x                    
+                secnames = self.h.cas().name()#sec.name()  
+                #print secnames, seg.x                       
+                #shiplist.append((secnames,seg.x))
+                coordict['secnames'] = str(secnames)
+                shiplist.append(coordict)
+                #self.h.pop_section()
                
         #pdb.set_trace()
         return shiplist
@@ -477,6 +523,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                     gidn=k['gid']    
                     r = float(r)    
+                  
+                    ##
+                    ## Below could be another function.
+                    ##
+                    ##
+                    ##
                     if r < 1:
                         #pdb.set_trace()
                         
@@ -529,6 +581,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         h.Cell[cellind].div.append(k['gid'])
                         h.Cell[cellind].gvpre.append(k['gid'])
                         nc=pc.gid_connect(k['gid'],syn_)                                        
+                        nc.threshold = -20
                         nc.delay=1+r/0.4
                         nc.weight[0]=r/0.4    
                         self.nclist.append(nc)
@@ -540,15 +593,48 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         #Below syntax wont work on a parallel architecture.
                         #nc = self.h.NetCon(source_section(0.5)._ref_v, syn, sec=source_section)
                         #nc.weight[0] = connection["weight"]
-                        nc.threshold = -20
-                        nc.delay = 2.0
-            k={}#Dictionaries need to be redeclared before they can become updated!
-            s={}        
+                        #nc.delay = 2.0
+            #k={}#Dictionaries need to be redeclared before they can become updated!
+            #s={}        
                           #logger.debug('This is a critical message.',nc, self.ecm, self.icm)
                           #logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
                     
                     #h('uninsert xtra')                          
                     #return self.nclist, self.ecm, self.icm
+
+
+    def wirecells_test(self):
+        """This function constitutes the outermost loop of the parallel wiring algor
+        The function returns two adjacency matrices. One matrix whose elements are excitatory connections and another matrix of inhibitory connections"""
+        from segment_distance import dist3D_segment_to_segment
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        h=self.h    
+        pc=h.ParallelContext()
+        secnames = ''
+        cellind =0 
+        polarity = 0
+        h('objref coords')
+        h('coords = new Vector(3)')
+        h('objref pc')
+        h('pc = new ParallelContext()')        
+        coordict=None
+        coordictlist=None
+        #Iterate over all CPU ranks, iterate through all GIDs (global 
+        #identifiers, stored in the python dictionary).
+        for s in xrange(0, SIZE):
+            celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
+            for (i,j) in celliter:  
+                cell1=pc.gid2cell(i)
+                coordictlist=self.nestedpre_test(i)
+            data = COMM.bcast(coordictlist, root=s)  # ie root = rank
+            if len(data) != 0:
+                self.nestedpost(data)
+        print('sums of connectivity\n')
+        
+        return (self.nclist, self.ecm, self.icm)
 
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
