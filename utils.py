@@ -336,7 +336,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
             #for (seg, sec) in seglist:
                 sec.push()
-                sec.nseg
+                #sec.nseg
                 #for (seg,sec, cellc) in seglist:
                 get_cox = str('coords.x[0]=x_xtra('
                               + str(seg.x) + ')')
@@ -406,21 +406,35 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('coords2 = new Vector(3)')
         #iterdata=iter( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']))
         #iterdata=( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )
-        iterdata=iter(data)
-        
-        for s in iterdata: 
-            k={}#Dictionaries need to be redeclared before they can become updated!
-            k=s            
+        #iterdata=iter(data)
+        kold=0
+        segxold=0
+        secold=''
+        for s in data: 
+            k={}
+            k=s
+            #Dictionaries need to be redeclared before they can become updated!
+            #k=iterdata.next()
+            #assert k!=kold
+            print segxold, 'segxold!=seg.x' 
+            print secold, 'secold!=sec.name()'
+            print k
+       
+            kold=k                    
             itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
             for i,t in itercell :                          
-                #pdb.set_trace()
-                        
+                #       
                 #iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)                    
-                iterseg=( (seg,sec) for sec in t.spk_rx_ls.allsec() for seg in sec )                    
-                
-                for seg,sec in iterseg:
+                iterseg=[ (seg,sec) for sec in t.spk_rx_ls.allsec() for seg in sec ]                    
+                for (seg,sec) in iterseg:
+                #for index in xrange(0,len(iterseg)-1):
+                #while seg,sec=iterseg.next():
+                      
+                    #pdb.set_trace()
+                    secold=sec.name()
+                    segxold=seg.x
                     #sec.push()
-                    
+                    #k={}
                     #print seg.x, sec.name(), 'shipped entities ', k['secnames'], k['gid'], ' why not update? '
                     
                     h('objref cell1')
@@ -462,7 +476,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     gidn=k['gid']    
                     r = float(r)    
                     if r < 1:
-                          
+                        #pdb.set_trace()
                         
                         print r, 'the distance'# 'this is not hopefuly wiring everything to everything'
                         polarity = 0        
@@ -516,6 +530,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         nc.delay=1+r/0.4
                         nc.weight[0]=r/0.4    
                         self.nclist.append(nc)
+                
                         #self.h.pop_section()
                    
                         #source_section = source_cell.soma[0]
@@ -525,7 +540,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         #nc.weight[0] = connection["weight"]
                         nc.threshold = -20
                         nc.delay = 2.0
-                    
+            k={}#Dictionaries need to be redeclared before they can become updated!
+            s={}        
                           #logger.debug('This is a critical message.',nc, self.ecm, self.icm)
                           #logger.debug('This is a low-level debug message.',nc, self.ecm, self.icm)
                     
