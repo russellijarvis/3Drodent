@@ -332,9 +332,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('coords = new Vector(3)')
         if j in self.celldict.keys():
             seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls.allsec() for seg in sec )              
-            #for sec in self.celldict[j].spk_trig_ls.allsec():
-               #for seg in sec:
-            print type(seglist)#, len(seglist)
             for (seg,sec, cellc) in seglist:
 
             #for (seg, sec) in seglist:
