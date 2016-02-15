@@ -46,8 +46,12 @@ information=read_local_json()
 #CRE virus connectivity?
 from utils import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=100)
+utils = Utils(config,NCELL=4)
 info_swc=utils.gcs(utils.NCELL)
+
+#utils.nestedpre_test(0)
+utils.wirecells_test()#wire cells on different hosts.
+
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    

@@ -455,7 +455,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #iterdata=iter( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']))
         #iterdata=( (k,i,t) for k in data for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )
         #iterdata=iter(data)
-        kold=0
+        kold={}
         segxold=0
         secold=''
         for s in data: 
@@ -463,12 +463,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             k=s
             #Dictionaries need to be redeclared before they can become updated!
             #k=iterdata.next()
-            #assert k!=kold
-            #print segxold, 'segxold!=seg.x' 
-            #print secold, 'secold!=sec.name()'
+            assert k['secnames']!=kold['secnames']
+            print segxold, 'segxold!=seg.x' 
+            print secold, 'secold!=sec.name()'
             #print k
        
-            kold=k                    
+            kold['secnames']=k['secnames']                    
             itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
             for i,t in itercell :                          
                 #       
