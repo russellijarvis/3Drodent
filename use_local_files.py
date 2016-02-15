@@ -26,12 +26,13 @@ bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 
 #Above and below are the same. Above is online version, below is offline version that acts on local files.
 #Use the other methods in the biophysical_perisomatic_api to one by one do the things needed to cache whole models.
-def read_local_json():
-    from allensdk.api import api
-    f1= open('neuron_models_from_query_builder.json')
-    information = api.load(f1)
-    return information
-information=read_local_json()
+
+#def read_local_json():
+#    from allensdk.api import api
+#    f1= open('neuron_models_from_query_builder.json')
+#    information = api.load(f1)
+#    return information
+#information=read_local_json()
 
 #bp.cache_data(395310469, working_directory='neuronal_model')
 #for i in information['msg']:    
@@ -82,8 +83,8 @@ config = Config().load('config.json')
 utils = Utils(config)
 NCELL=utils.NCELL=18
 
-for i in 
-utils.celldict
+#for i in 
+#utils.celldict
 
 #nclist, ecm, icm=utils.wirecells_s()#Wire cells on same host.
 nclist, ecm, icm=utils.wirecells3()#wire cells on different hosts.
