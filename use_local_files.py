@@ -44,45 +44,59 @@ information=read_local_json()
 #Pvalb:  Inhibitory aspiny cells (i.e. it clustered the fast-spiking Pvalb cells)
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
 #CRE virus connectivity?
-from utils import Utils
-config = Config().load('config.json')
-utils = Utils(config,NCELL=4)
-info_swc=utils.gcs(utils.NCELL)
-
-#utils.nestedpre_test(0)
-utils.wirecells_test()#wire cells on different hosts.
-
-utils.wirecells()#wire cells on different hosts.
-utils.matrix_reduce()
-utils.h('forall{ for(x,0){ uninsert xtra}}')    
+import unittest
+    
+class Test(unittest.TestCase):
 
 
-from rigp import NetStructure
-hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
-print 'experimental rig'
-hubs.hubs()
-
-if utils.COMM.rank==0:
-    utils.plotgraph()
-    hubs.save_matrix()
-
-#In addition to stimulating the out degree hub, stimulate the first cell on each host,
-#To make activity more likely.
-utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
-
-# configure recording
-utils.spikerecord()
-
-vec = utils.record_values()
-
-#utils.h.dt = 0.025
-#util.h.xopen("rigp.hoc")
-tstop = 3000
-utils.COMM.barrier()
+    def setUp(self):
+        pass
 
 
-utils.prun(tstop)
+    def tearDown(self):
+        pass
 
+    from utilstest import Utils
+    
+    config = Config().load('config.json')
+    utils = Utils(config,NCELL=40)
+    info_swc=utils.gcs(utils.NCELL)
+    
+    #utils.nestedpre_test(0)
+    utils.wirecells_test()#wire cells on different hosts.
+    
+    #utils.wirecells()#wire cells on different hosts.
+    utils.matrix_reduce()
+    utils.h('forall{ for(x,0){ uninsert xtra}}')    
+
+
+    from rigp import NetStructure
+    hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
+    print 'experimental rig'
+    hubs.hubs()
+    
+    if utils.COMM.rank==0:
+        utils.plotgraph()
+        hubs.save_matrix()
+
+    #In addition to stimulating the out degree hub, stimulate the first cell on each host,
+    #To make activity more likely.
+    utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
+    
+    # configure recording
+    utils.spikerecord()
+    
+    vec = utils.record_values()
+    print 'setup recording'
+    #utils.h.dt = 0.025
+    #util.h.xopen("rigp.hoc")
+    tstop = 3000
+    utils.COMM.barrier()
+    
+    
+    utils.prun(tstop)
+    #Probably just get the spike distance.
+    #Make my project open source.
 
 #with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
 #       pickle.dump(vec, handle)    
