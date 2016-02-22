@@ -57,8 +57,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
-        self.ecg = networkx.Graph()
-        self.icg = networkx.Graph()
+        self.ecg = networkx.DiGraph()
+        self.icg = networkx.DiGraph()
         if self.RANK==0:        
             self.my_icm = np.zeros((self.NCELL, self.NCELL))
             self.my_ecm = np.zeros((self.NCELL, self.NCELL))
@@ -268,10 +268,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         COMM.Barrier()
         self.my_icg = self.icg
-        COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
+        COMM.Reduce([self.icg, MPI.DOUBLE], [self.my_icg, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
         self.my_ecg = self.ecg
-        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
+        COMM.Reduce([self.ecg, MPI.DOUBLE], [self.my_ecg, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
         
 
@@ -281,10 +281,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM = self.COMM
         RANK=self.RANK
         COMM.Barrier()
-        my_tvec = np.zeros_like(idvec)
+        self.my_tvec = np.zeros_like(idvec)
         COMM.Reduce([tvec, MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        my_idvec = np.zeros_like(tvec)
+        self.my_idvec = np.zeros_like(tvec)
         COMM.Reduce([idvec, MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0
         )
