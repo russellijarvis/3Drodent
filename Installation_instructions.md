@@ -1,26 +1,31 @@
+##Installation Instructions
+
 This project has some strong dependencies on the NEURON module for Python, and also open-mpi, not to mention the mpi4py module for NEURON.
 
 In order to run any code pertaining to this model, as a minimum you will need to compile NEURON-7.4 with Python and mpi support. I found the following guides helpful, but not completely sufficient 
 for managing this compilation process. You may wish to look at them for inspiration if you are faced with obstacles when compiling these programs.
-The instructions at https://www.neuron.yale.edu/neuron/download/compilestd_osx#openmpi
-Installing NEURON, MPI, and Python on OS X Lion
-https://sphericalcow.wordpress.com/2012/09/02/installing-neuron-mpi-and-python-on-os-x-lion/
+[The instructions at](https://www.neuron.yale.edu/neuron/download/compilestd_osx#openmpi)
+[Installing NEURON, MPI, and Python on OS X Lion](https://sphericalcow.wordpress.com/2012/09/02/installing-neuron-mpi-and-python-on-os-x-lion/
+)
 
-Compiling NEURON-7.4 from src with MPI and Python on OSX
+##Compiling NEURON-7.4 from src with MPI and Python on OSX
 Upgrading NEURON to have support for both Python and MPI has never been a painless operation for me. Sometimes its hard to get excited about these administrative tasks. After a few days on the back burner, I managed to resolve a lot of the inevitable package management issues, and path related issues stopping me from having a functional version of NEURON-7.4 on OSX with Python and MPI support.
 
 I have done this type of upgrade several times now, and it regardless of whether I do it on Ubuntu or OSX it is always a multiple day package management challenge.
 
 This time I needed to reinstall gfortran in order to install openmpi, as the standard gfortran compiler was not able to pass some standard tests.
 
-If you have recently upgraded to OSX El Capitan, like me you may need to upgrade macports as well as Xtools and Xcode. Below are some of the important package installs and package upgrades I needed to make. I recommend using macports to install packages, as opposed to manually installing packages, as the instructions kind of insinuate here:
+If you have recently upgraded to OSX El Capitan, like me you may need to upgrade macports as well as Xtools and Xcode. Below are some of the important package installs and package upgrades I needed to make. I recommend using macports to install packages, 
+as opposed to manually installing packages, as the instructions kind of insinuate here:
 
 http://www.neuron.yale.edu/neuron/download/compilestd_osx
+
 Update macports if you have upgraded operating system to el capitan.
 Use macports Select
 $xcode-select --install
 $sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
 $sudo port install autoconf automake libtool perl5 +perl5_12 m4
+
 https://gcc.gnu.org/wiki/GFortranBinaries#MacOS
 
 $sudo pip –upgrade mpi4py
