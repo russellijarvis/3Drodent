@@ -63,7 +63,7 @@ info_swc=utils.gcs(utils.NCELL)
 #utils.setup_iclamp_step(, target_cell, amp, delay, dur)
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
-utils.graph_reduce()
+#utils.graph_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
@@ -82,7 +82,7 @@ utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
-tstop = 5
+tstop = 100
 utils.COMM.barrier()
     
     
@@ -91,11 +91,12 @@ tvec=utils.tvec.to_python()
 idvec=utils.idvec.to_python()
 #Probably just get the spike distance.
 #Make my project open source.
-idvec,tvec=utils.vec_reduce(idvec,tvec)
+utils.vec_reduce()
 if utils.RANK==0:
-    print tvec[idvec]
+    print utils.my_tvec[utils.my_idvec]
+vecs=zip(utils.my_tvec,utils.my_idvec)
 with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
-    pickle.dump(vec, handle)    
+    pickle.dump(utils.my_tvec, handle)    
 
 #system.
 chtodir=os.getcwd()+"../../tigramite_1.3"

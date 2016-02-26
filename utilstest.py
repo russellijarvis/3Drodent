@@ -52,17 +52,19 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         self.tvec=self.h.Vector()    
         self.idvec=self.h.Vector() 
-        self.my_tvec = np.zeros(0)
-        self.my_idvec = np.zeros(0)
+        #self.my_tvec = np.zeros(0)
+        #self.my_idvec = np.zeros(0)
 
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
         self.ecg = networkx.DiGraph()
         self.icg = networkx.DiGraph()
-        if self.RANK==0:        
-            self.my_icm = np.zeros((self.NCELL, self.NCELL))
-            self.my_ecm = np.zeros((self.NCELL, self.NCELL))
-
+        #if self.RANK==0:        
+        self.my_icm = np.zeros_like(self.icm)
+        self.my_ecm = np.zeros_like(self.ecm)
+        self.my_ecg = networkx.DiGraph()
+        self.my_icg = networkx.DiGraph()
+ 
         #self.pc=h.pc
 
     def __del__(self):
@@ -134,7 +136,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         else:
             length=len(excitatory)
         for i in xrange(0,length):
-            if ((i%3)==0):
+            #TODO change condition, and then re-run wiring not from file
+            #if ((i%3)==0):
+            if ((i%2)==0):
                 bothtrans.append(interneurons[i]) 
             else:
                 bothtrans.append(excitatory[i])
@@ -181,7 +185,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d = { x: y for x,y in enumerate(polarity)}         
         itergids = iter( i for i in range(RANK, NCELL, SIZE) )        
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
-        itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
+        #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         for i in itergids:
             cell = h.mkcell(d[i][3])
@@ -248,7 +252,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         allsecs=self.h.SectionList()
         return allsecs
 
-    def matrix_reduce(self):       
+    def matrix_reduce(self): 
+        import networkx as nx
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -260,6 +265,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.my_ecm = np.zeros_like(self.ecm)
         COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
+        self.my_icg = nx.DiGraph(self.my_icm)
+        self.my_ecg = nx.DiGraph(self.my_ecg)
 
     def graph_reduce(self):       
         NCELL=self.NCELL
@@ -268,27 +275,29 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         COMM.Barrier()
         self.my_icg = self.icg
-        COMM.Reduce([self.icg, MPI.DOUBLE], [self.my_icg, MPI.DOUBLE], op=MPI.SUM,
+        COMM.Reduce([self.icg], [self.my_icg], op=MPI.SUM,
                     root=0)
         self.my_ecg = self.ecg
-        COMM.Reduce([self.ecg, MPI.DOUBLE], [self.my_ecg, MPI.DOUBLE], op=MPI.SUM,
+        COMM.Reduce([self.ecg], [self.my_ecg], op=MPI.SUM,
                     root=0)
         
 
-    def vec_reduce(self,idvec,tvec):       
+    def vec_reduce(self):#,idvec,tvec):       
+        print type(np.array(self.idvec.to_python()))
+        #print type(np.array(tvec))
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
         COMM.Barrier()
-        self.my_tvec = np.zeros_like(idvec)
-        COMM.Reduce([tvec, MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
+        self.my_tvec = np.zeros_like(self.idvec.to_python())
+        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        self.my_idvec = np.zeros_like(tvec)
-        COMM.Reduce([idvec, MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
+        self.my_idvec = np.zeros_like(self.tvec.to_python())
+        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0
         )
-        return my_idvec, my_tvec
+        #return self.my_idvec, self.my_tvec
 
 
     def prun(self,tstop):
@@ -388,20 +397,36 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        from neuron import h
-        pc=h.ParallelContext()
+        #from neuron import h
         h=self.h  
+        
+        pc=h.ParallelContext()
         polarity = 0        
         polarity=int(h.Cell[int(cellind)].polarity)
         if polarity==1:
+            #TODO pickle load the graphs here instead of making them manually.
             self.ecg.add_edge(i,gidn,weight=r/0.4)
+            self.ecm[i][gidn] = self.ecm[i][gidn] + 1
+            #self.ecg.add_edge(i,gidn,weight=r/0.4)
+            #self.ecg[i][gidn]['post_loc']=secnames
+            #self.ecg[i][gidn]['pre_loc']=str(sec.name())
+            #self.seclists.append(secnames)
+            assert np.sum(self.ecm)!=0
             #Add other edge attributes like secnames etc.
         else:
+            #self.icg.add_edge(i,gidn,weight=r/0.4)
+            self.icm[i][gidn] = self.icm[i][gidn] + 1
             self.icg.add_edge(i,gidn,weight=r/0.4)
+            #self.icg[i][gidn]['post_loc']=secnames
+            #self.icg[i][gidn]['pre_loc']=str(sec.name())
+
+            assert np.sum(self.icm)!=0
+                
             #Add other edge attributes like secnames etc.
 
                   
         h('objref syn_')   
+
         h(post_syn)
         print post_syn
         syn_=h.syn_
@@ -431,7 +456,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             if int(polarity) == int(0):
                 post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
                 self.icm[i][gidn] = self.icm[i][gidn] + 1
-                self.icg.add_edge(i,gidn)
                 self.icg.add_edge(i,gidn,weight=r/0.4)
                 self.icg[i][gidn]['post_loc']=secnames
                 self.icg[i][gidn]['pre_loc']=str(sec.name())
@@ -448,11 +472,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 if (k['gid']%2==0):
                     post_syn = secnames + ' ' + 'syn_ = new ExpSid(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
-                    
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
                     self.ecg[i][gidn]['post_loc']=secnames
                     self.ecg[i][gidn]['pre_loc']=str(sec.name())
-
                     self.seclists.append(secnames)
                     assert np.sum(self.ecm)!=0
                 else:

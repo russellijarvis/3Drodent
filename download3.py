@@ -1,5 +1,59 @@
 from allensdk.core.mouse_connectivity_cache import MouseConnectivityCache
+from allensdk.api.queries.mouse_connectivity_api import MouseConnectivityApi
+import pdb
+mca = MouseConnectivityApi()
+print mca
+# get metadata for all non-Cre experiments
+#experiments = mca.experiment_source_search(injection_structures='root', transgenic_lines=0)
+# download the projection density volume for one of the experiments
+#pd = mca.download_projection_density('example.nrrd', experiments[0]['id'], resolution=25)
 
+#enter selected projection numbers here, e.g. 167794131, 297231636, 287495026
+id1 = 167794131
+id2 = 297231636
+id3 = 272736450
+# import allensdk python api
+from allensdk.api.queries.mouse_connectivity_api import MouseConnectivityApi
+mca = MouseConnectivityApi()
+# get metadata for all experiments
+experiments = mca.experiment_source_search(injection_structures=['VIS','PTLp','RSP'])
+# find selected experiments and format filenames, **Use the %paste magic function if pasting into ipython
+for i in range(len(experiments)):
+    if (experiments[i]['id'] == id1):
+        fn1 = str(experiments[i]['injection-structures'][0]['abbreviation']) + '_' + str(experiments[i]['id']) + '_' + str(experiments[i]['transgenic-line'])
+        print fn1
+    if (experiments[i]['id'] == id2):
+        fn2 = str(experiments[i]['injection-structures'][0]['abbreviation']) + '_' + str(experiments[i]['id']) + '_' + str(experiments[i]['transgenic-line'])
+        print fn2
+    if (experiments[i]['id'] == id3):
+        fn3 = str(experiments[i]['injection-structures'][0]['abbreviation']) + '_' + str(experiments[i]['id']) + '_' + str(experiments[i]['transgenic-line'])
+        print fn3
+# download selected experiment projection density files at 25 um resolution
+mca.download_projection_density(fn1 + '.nrrd', id1, resolution=25)
+mca.download_projection_density(fn2 + '.nrrd', id2, resolution=25)
+mca.download_projection_density(fn3 + '.nrrd', id3, resolution=25)
+import datetime, nrrd
+import matplotlib.pyplot as plt
+
+A1, metadata1 = nrrd.read(fn1 + '.nrrd')
+A1.shape
+
+plt.imshow(A1[300,:,:])
+plt.savefig('mouse_connectivity1.png')
+mxProj1 = amax(A1,0)  #second input is the dimension you want to project over
+plt.imshow(mxProj1)
+plt.savefig('mouse_connectivity2.png')
+
+
+
+for exp in range(len(experiments)):
+    
+    pd = mca.download_projection_density('example.nrrd', experiments[exp]['id'], resolution=25)
+    print(type(pd))
+    
+    
+    pdb.set_trace()
+    
 # The manifest file is a simple JSON file that keeps track of all of
 # the data that has already been downloaded onto the hard drives.
 # If you supply a relative path, it is assumed to be relative to your

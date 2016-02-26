@@ -21,9 +21,7 @@ import unittest
 
 #from pdb import Pdb
 import pdb as pdb
-
 import neuroelectro
-
 class Utils(HocUtils):#search multiple inheritance unittest.
 
     _log = logging.getLogger(__name__)
@@ -930,8 +928,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #import http_server  
         G=nx.from_numpy_matrix(self.my_ecm)
         d = json_graph.node_link_data(G)     
-        t = json_graph.json_graph.tree_graph(G)       
-        json.dump(d, open('force/force.json','w'))
+        t = json_graph.tree_graph(G)       
+        json.dump(d, open('js/network.json','w'))
         print('Wrote node-link JSON data to force/force.json')
         # open URL in running web browser
         #http_server.load_url('force/force.html')
