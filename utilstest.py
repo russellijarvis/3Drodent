@@ -14,13 +14,6 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 import unittest
 import pdb as pdb
-import neuroelectro
-
-
-#import neuroelectro, and test each cell to see if it conforms to acceptable dynamics for the allen brain 
-#ontology it is supposed to represent.
-#
-
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
@@ -49,12 +42,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.cellmorphdict={}
         self.nclist = []
         self.seclists=[]
-
         self.tvec=self.h.Vector()    
         self.idvec=self.h.Vector() 
-        #self.my_tvec = np.zeros(0)
-        #self.my_idvec = np.zeros(0)
-
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
         self.ecg = networkx.DiGraph()
@@ -91,14 +80,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         # I do not know how to refer to relative paths in Python, 
         # the below emulates a call to a relative path.
 
-
-    
-   
-
-
-
     def register_gid(self, gid, source, section=None):
-        """Register a global ID with the global `ParallelContext` instance."""
+        """- THOMAS MCTAVISH (2010-11-04): initial version. Modified version of the
+                project by Hines and Carnevale. (Hines M.L. and Carnevale N.T, 
+                Translating network models to parallel hardware in NEURON,
+                Journal of Neuroscience Methods 169 (2008) 425-455).
+        
+        Register a global ID with the global `ParallelContext` instance."""
         ###print "registering gid %s to %s (section=%s)" % (gid, source, section)
         self.parallel_context.set_gid2node(gid, self.mpi_rank) # assign the gid to this node
         if is_point_process(source):
@@ -113,7 +101,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                                         # global gid_sources list. It would be nicer to
                                         # be able to unregister a gid and have a __del__
                                         # method in ID, but this will do for now.
-
 
     def prep_list(self):                    
         '''
@@ -160,13 +147,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         #for swcf, i in enumerate(swclist):
         for i in itergids:
-            #morphology = swc.read_swc(swcf)
             cell = h.mkcell(swclist[i])
-                #self.generate_morphology(cell, d[i][3])
             self.generate_morphology(cell,swclist[i])
             self.load_cell_parameters(cell, fit_ids[utils.cells_data[i]['type']])
-            
-            #cell1=self.load_cell_parameters()       
             cells1.append(cell1)
             print type(cells1)
             print type(cell1)
@@ -201,6 +184,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0            
+            #pdb.set_trace()
+
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
@@ -211,7 +196,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     def gcs(self,NCELL):
         """Instantiate NEURON cell Objects in the Python variable space, such that cell
         that all cells have unique identifiers."""
-   
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
@@ -235,29 +219,17 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.h('forall{ for(x,0){ insert extracellular}}')    
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
-         
-
- # no .clear() command
-        
-    def htype (obj): st=obj.hname(); sv=st.split('['); return sv[0]
-    def secname (obj): obj.push(); print self.h.secname() ; self.h.pop_section()
-    def psection (obj): obj.push(); print self.h.psection() ; self.h.pop_section()
     
-    # still need to generate a full allsecs
-    def mkallsecs():
-        """ mkallsecs - make the global allsecs variable, containing
-        all the NEURON sections.
-        """
-        #global allsecs
-        allsecs=self.h.SectionList()
-        return allsecs
-
-    def matrix_reduce(self): 
+    def matrix_reduce(self):
         import networkx as nx
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
+        import numpy as np
+        #if COMM.rank==2:
+        #    assert np.sum(self.ecm)!=0
+
         COMM.Barrier()
         self.my_icm = np.zeros_like(self.icm)
         COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
@@ -267,19 +239,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     root=0)
         self.my_icg = nx.DiGraph(self.my_icm)
         self.my_ecg = nx.DiGraph(self.my_ecg)
-
-    def graph_reduce(self):       
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        COMM = self.COMM
-        RANK=self.RANK
-        COMM.Barrier()
-        self.my_icg = self.icg
-        COMM.Reduce([self.icg], [self.my_icg], op=MPI.SUM,
-                    root=0)
-        self.my_ecg = self.ecg
-        COMM.Reduce([self.ecg], [self.my_ecg], op=MPI.SUM,
-                    root=0)
+        if RANK==0:
+            assert np.sum(self.my_ecm)!=0
         
 
     def vec_reduce(self):#,idvec,tvec):       
@@ -297,7 +258,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0
         )
-        #return self.my_idvec, self.my_tvec
 
 
     def prun(self,tstop):
@@ -309,12 +269,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         checkpoint_interval = 50000.
 
-        #This code is from:
+        #The following code is from the open source code at:
         #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
+        #with some minor modifications
         cvode = h.CVode()
         cvode.cache_efficient(1)
-    
-      # pc.spike_compress(0,0,1)
+        # pc.spike_compress(0,0,1)
     
         pc.setup_transfer()
         mindelay = pc.set_maxstep(10)
@@ -439,7 +399,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         nc.delay=1+r/0.4
         nc.weight[0]=r/0.4    
         self.nclist.append(nc)
-
+        
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
         NCELL=self.NCELL
@@ -454,7 +414,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             polarity=int(h.Cell[int(cellind)].polarity)
             h('objref syn_')        
             if int(polarity) == int(0):
-                post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
+                post_syn = secnames + ' ' + 'syn_ = new FastInhib(' + str(seg.x) + ')'
+                #post_syn = secnames + ' ' + 'syn_ = new GABAa(' + str(seg.x) + ')'
                 self.icm[i][gidn] = self.icm[i][gidn] + 1
                 self.icg.add_edge(i,gidn,weight=r/0.4)
                 self.icg[i][gidn]['post_loc']=secnames
@@ -523,7 +484,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         from segment_distance import dist3D_segment_to_segment
         and I am considering using them here also
         """
-        from segment_distance import dist3D_segment_to_segment
+        #from segment_distance import dist3D_segment_to_segment
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -615,10 +576,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             for s in xrange(0, SIZE):
                 celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
                 for (i,j) in celliter:  
+                    #pdb.set_trace()
+
                     cell1=pc.gid2cell(i)
                     coordictlist=self.nestedpre_test(i)
                 data = COMM.bcast(coordictlist, root=s)  # ie root = rank
                 if len(data) != 0:
+                    #pdb.set_trace()
                     self.nestedpost_test(data)
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
@@ -634,7 +598,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     print s
                 for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
                     self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
-        #return (self.nclist, self.ecm, self.icm)
+        import numpy as np
+        #if COMM.rank==2:
+        #    assert np.sum(self.ecm)!=0
 
     def tracenet(self):
         '''
@@ -745,59 +711,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 sec.ena = erev["ena"]
                 sec.ek = erev["ek"]
 
-    def connect_cells(self):
-        self.synlist = []
-        self.nclist = []
-        connections = self.description.data["biophys"][0]["connections"]
-
-        for connection in connections:
-            for target in connection["targets"]:
-                source_cell = self.cells[connection["source"]]
-                target_cell = self.cells[target]
-
-                syn = self.h.Exp2Syn(0.5, sec=target_cell.dend[0])
-                syn.e = connection["erev"]
-                source_section = source_cell.soma[0]
-                nc = self.h.NetCon(source_section(0.5)._ref_v, syn, sec=source_section)
-                nc.weight[0] = connection["weight"]
-                nc.threshold = -20
-                nc.delay = 2.0
-
-                self.synlist.append(syn)
-                self.q.append(nc)
-
-
-    def connect_ring(self):
-        self.synlist = []
-        self.nclist = []
-        connections = self.description.data["biophys"][0]["connections"]
-
-        #for connection in connections:
-        #    for target
-            #in connection["targets"]:
-        for i,discard in enumerate(self.cells):
-            for j, discard in enumerate(self.cells):
-                if i!=j:
-                    print type(i), type(j)
-                    
-                    source_cell = self.cells[i]
-                    target_cell = self.cells[j]
-                    syn = self.h.Exp2Syn(0.5, sec=target_cell.dend[0])
-                    self.nclist[0].syn.Section
-                    #syn.e = connection["erev"]
-                    #syn.e = -0.6
-                    source_section = source_cell.soma[0]
-                    nc = self.h.NetCon(source_section(0.5)._ref_v, syn, sec=source_section)
-                    nc.weight[0]=0.005                   
-                    #nc.weight[0] = connection["weight"]
-                    nc.threshold = -20
-                    nc.delay = 2.0        
-                    self.synlist.append(syn)
-                    self.nclist.append(nc)
-
-
-    #from neuromac.segment_distance import dist3D_segment_to_segment
-        
 
     def setup_iclamp_step(self, target_cell, amp, delay, dur):
         self.stim = self.h.IClamp(target_cell.soma[0](0.5))
