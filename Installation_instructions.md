@@ -81,12 +81,13 @@ Now the file nrnenv suggested in the install instructions needs to be modified t
 
 contents of nrnenv file:
 
+```sh
 #!/bin/bash/
-
 export IDIR=/Users/kappa
 export N=/Applications/NEURON-7.4/nrn
 export CPU=x86_64
 export PATH=$N/$CPU/bin:$PATH
+```
 
 ##After NEURON+Python+MPI is built:
 Once NEURON+Python+MPI has been successfuly built, the next step is to build the NMODL code. The NMODL code is comprised by files with the extension .mod.
