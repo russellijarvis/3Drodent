@@ -25,40 +25,15 @@ bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 
 #Above and below are the same. Above is online version, below is offline version that acts on local files.
 #Use the other methods in the biophysical_perisomatic_api to one by one do the things needed to cache whole models.
-
-'''
-def read_local_json():
-    from allensdk.api import api
-    f1= open('neuron_models_from_query_builder.json')
-    information = api.load(f1)
-    return information
-information=read_local_json()
-'''
-
-#bp.cache_data(395310469, working_directory='neuronal_model')
-#for i in information['msg']:    
-#    bp.cache_data(i['id'], working_directory='neuronal_model')
-
 #==============================================================================
 #Excitatory and inhibitory cells are categorised according to the suffix's listed below:
 #Pvalb:  Inhibitory aspiny cells (i.e. it clustered the fast-spiking Pvalb cells)
 #Scnn1a: Layer 4 excitatory pyramidal neurons.
 #CRE virus connectivity?
 import unittest
-    
-#class Test(unittest.TestCase):
-
-
-#    def setUp(self):
-#        pass
-
-#
-#    def tearDown(self):
-#        pass
-
 from utilstest import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=40,readin=1)
+utils = Utils(config,NCELL=100,readin=0)
 info_swc=utils.gcs(utils.NCELL)
 #utils.setup_iclamp_step(, target_cell, amp, delay, dur)
 utils.wirecells_test()#wire cells on different hosts.
@@ -66,12 +41,18 @@ utils.matrix_reduce()
 #utils.graph_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure
-hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
-print 'experimental rig'
 if utils.COMM.rank==0:
+    hubs=NetStructure(utils,utils.my_ecm,utils.my_icm,utils.celldict)
+    print 'experimental rig'
     utils.plotgraph()
     hubs.save_matrix()
+    hubs.hubs()
+    print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
+
+#Does the insertion of an IClamp work 
+hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
 hubs.hubs()
+print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
     
     
 #In addition to stimulating the out degree hub, stimulate the first cell on each host,
@@ -82,19 +63,18 @@ utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
-tstop = 100
+tstop = 1000
 utils.COMM.barrier()
-    
-    
 utils.prun(tstop)
 tvec=utils.tvec.to_python()
 idvec=utils.idvec.to_python()
+print tvec
+print idvec
 #Probably just get the spike distance.
 #Make my project open source.
 utils.vec_reduce()
 if utils.RANK==0:
-    print utils.my_tvec[utils.my_idvec]
-vecs=zip(utils.my_tvec,utils.my_idvec)
+    vecs=zip(utils.my_tvec,utils.my_idvec)
 with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
     pickle.dump(utils.my_tvec, handle)    
 
@@ -118,4 +98,19 @@ def mkjson(): #Only ascii as in dictionary contents
     for m in morphs:
         write(str(m)+'.json',m.root)
     return 0
+
+
+
+'''
+def read_local_json():
+    from allensdk.api import api
+    f1= open('neuron_models_from_query_builder.json')
+    information = api.load(f1)
+    return information
+information=read_local_json()
+'''
+
+#bp.cache_data(395310469, working_directory='neuronal_model')
+#for i in information['msg']:    
+#    bp.cache_data(i['id'], working_directory='neuronal_model')
 
