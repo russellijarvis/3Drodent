@@ -1,21 +1,9 @@
 3Drodentm
 =========
 
-A parallel wiring algorithm for wiring arbitary detailed morphologies.
+A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
+
 
 This model needs an installation of NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
-See how to compile http://www.neuron.yale.edu/neuron/download/compile_linux
-
-The mod files must be compiled with:
-$nrnivmodl
-=======
-3Drodent
-========
-
-A parallel wiring algorithm for wiring arbitary detailed morphologies
-=======
-# 3Drodent
-
-A distance dependent 3d wiring algorithm to facilitate the studying of neurite atrophy and growth in 3D neural networks.
-An extension of the Allen Brain SDK Utils class.
+See the file Installation_instructions.md in this repository.
