@@ -96,3 +96,11 @@ Once NEURON+Python+MPI has been successfuly built, the next step is to build the
 Currently the main directory contains the *.mod files (TODO move these to a seperate directory). Navigating to the root 3Drodent dir and executing 
 $nrnivmodl 
 is sufficient to build the nmodl code before running the model.
+
+##Running the model
+To facilitate easy running of the model  (in Ubuntu only) I have created the BASH alias:
+```sh
+alias rspp='cd /git/3Drodentm; mpiexec -np 4 xterm -e "ipython -i use_local_files.py"'
+```
+Adding the alias to my ~/.bashrc file means that I can launch the model simply by executing $rspp at the command line.
+However note that this depends on the program xterm being available. In Ubuntu xterm can readily by installed using apt-get however in OSX xterm depends on XQuartz the X11 server which will need to be installed. [Instructions for installing XQuartz](https://www.neuron.yale.edu/neuron/download/compilestd_osx)
