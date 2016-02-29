@@ -127,14 +127,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         else:
             length=len(excitatory)
         for i in xrange(0,length):
-            #TODO change condition, and then re-run wiring not from file
-            #if ((i%3)==0):
-            if ((i%2)==0):
+            #If change conditions, then must re-run wiring not from file
+            #if ((i%2)==0):
+            if ((i%3)==0): #2/3 excitatory to reflect cortical balance of transmitters.
                 bothtrans.append(interneurons[i]) 
             else:
                 bothtrans.append(excitatory[i])
-        return bothtrans#(excitatory, interneurons)      
-        
+        return bothtrans
+    
     def read_local_swc(self):
         h=self.h    
         NCELL=self.NCELL
@@ -418,7 +418,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pc=h.ParallelContext()
         h=self.h
         self.visited[i][gidn] = self.visited[i][gidn] + 1              
-        if r < 2.5:
+        if r < 2.5: #2.5 micro metres.
             polarity = 0        
             polarity=int(h.Cell[int(cellind)].polarity)
             h('objref syn_')        
@@ -428,7 +428,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 self.icm[i][gidn] = self.icm[i][gidn] + 1
                 self.icg.add_edge(i,gidn,weight=r/0.4)
                 self.icg[i][gidn]['post_loc']=secnames
-                self.icg[i][gidn]['pre_loc']=str(sec.name())
+                self.icg[i][gidn]['pre_loc']=k['secnames']
 
                 assert np.sum(self.icm)!=0
         
@@ -444,7 +444,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
                     self.ecg[i][gidn]['post_loc']=secnames
-                    self.ecg[i][gidn]['pre_loc']=str(sec.name())
+                    self.ecg[i][gidn]['pre_loc']=k['secnames']
                     self.seclists.append(secnames)
                     assert np.sum(self.ecm)!=0
                 else:
@@ -453,13 +453,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
                     self.ecg[i][gidn]['post_loc']=secnames
-                    self.ecg[i][gidn]['pre_loc']=str(sec.name())
+                    self.ecg[i][gidn]['pre_loc']=k['secnames']
                     self.seclists.append(secnames)
                     assert np.sum(self.ecm)!=0
         
             h(post_syn)
             self.synapse_list.append((r,post_syn,cellind,k,gidn,i))
-            print post_syn
+            print post_syn,' ',k['secnames'],' ',secnames,' ',str(sec.name()) 
             #h('print syn_')
             syn_=h.syn_
             h.syn_.cid=i
@@ -524,12 +524,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
                 k=t #such that it is not prevented from updating
-                type(k), len(k)
-                #pdb.set_trace() 
-                k['secnames']
                 itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
-                #pdb.set_trace() 
-    
                 for i,t in itercell :                          
                     iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)               
                     for (seg,sec) in iterseg:
