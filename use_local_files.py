@@ -17,23 +17,11 @@ from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
 import d3py
 import pickle
-
-
-
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
-
-
-#Above and below are the same. Above is online version, below is offline version that acts on local files.
-#Use the other methods in the biophysical_perisomatic_api to one by one do the things needed to cache whole models.
-#==============================================================================
-#Excitatory and inhibitory cells are categorised according to the suffix's listed below:
-#Pvalb:  Inhibitory aspiny cells (i.e. it clustered the fast-spiking Pvalb cells)
-#Scnn1a: Layer 4 excitatory pyramidal neurons.
-#CRE virus connectivity?
 import unittest
 from utilstest import Utils
 config = Config().load('config.json')
-utils = Utils(config,NCELL=100,readin=0)
+utils = Utils(config,NCELL=20,readin=0)
 info_swc=utils.gcs(utils.NCELL)
 #utils.setup_iclamp_step(, target_cell, amp, delay, dur)
 utils.wirecells_test()#wire cells on different hosts.
@@ -42,23 +30,19 @@ utils.matrix_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure
 if utils.COMM.rank==0:
-    hubs=NetStructure(utils,utils.my_ecm,utils.my_icm,utils.celldict)
+    hubs=NetStructure(utils,utils.my_ecm,utils.my_icm,utils.visited,utils.celldict)
     print 'experimental rig'
     utils.plotgraph()
     hubs.save_matrix()
     hubs.hubs()
     print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
-
 #Does the insertion of an IClamp work 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
 hubs.hubs()
 print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
-    
-    
 #In addition to stimulating the out degree hub, stimulate the first cell on each host,
 #To make activity more likely.
 utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
-    
 # configure recording
 utils.spikerecord()
 vec = utils.record_values()
@@ -77,7 +61,6 @@ if utils.RANK==0:
     vecs=zip(utils.my_tvec,utils.my_idvec)
 with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
     pickle.dump(utils.my_tvec, handle)    
-
 #system.
 chtodir=os.getcwd()+"../../tigramite_1.3"
 os.chdir("/home/russell/tigramite_1.3")

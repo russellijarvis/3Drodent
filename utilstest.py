@@ -46,14 +46,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.idvec=self.h.Vector() 
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
+        self.visited = np.zeros((self.NCELL, self.NCELL))
+
         self.ecg = networkx.DiGraph()
         self.icg = networkx.DiGraph()
         #if self.RANK==0:        
+        self.my_visited = np.zeros_like(self.icm)
         self.my_icm = np.zeros_like(self.icm)
         self.my_ecm = np.zeros_like(self.ecm)
         self.my_ecg = networkx.DiGraph()
         self.my_icg = networkx.DiGraph()
- 
+        self.debugdata=[]
+
         #self.pc=h.pc
 
     def __del__(self):
@@ -221,16 +225,20 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.h('grindaway()')    
     
     def matrix_reduce(self):
+        # TODO make this method argument based so it can handle arbitary input matrices not one in particular
+        #
         import networkx as nx
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
         import numpy as np
-        #if COMM.rank==2:
-        #    assert np.sum(self.ecm)!=0
 
         COMM.Barrier()
+        self.my_visited = np.zeros_like(self.visited)
+        COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+
         self.my_icm = np.zeros_like(self.icm)
         COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
@@ -408,8 +416,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         from neuron import h
         pc=h.ParallelContext()
-        h=self.h  
-        if r < 5:
+        h=self.h
+        self.visited[i][gidn] = self.visited[i][gidn] + 1              
+        if r < 2.5:
             polarity = 0        
             polarity=int(h.Cell[int(cellind)].polarity)
             h('objref syn_')        
@@ -439,7 +448,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     self.seclists.append(secnames)
                     assert np.sum(self.ecm)!=0
                 else:
-                    post_syn = secnames + ' ' + 'syn_ = new NMDA(' + str(seg.x) + ')'                       
+                    #TODO Find standard open source brain affiliated code for NMDA synapse
+                    post_syn = secnames + ' ' + 'syn_ = new ExpSid(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
                     self.ecg[i][gidn]['post_loc']=secnames
@@ -450,7 +460,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             h(post_syn)
             self.synapse_list.append((r,post_syn,cellind,k,gidn,i))
             print post_syn
-            h('print syn_')
+            #h('print syn_')
             syn_=h.syn_
             h.syn_.cid=i
             h.Cell[cellind].ampalist.append(h.syn_)
@@ -501,52 +511,67 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('pc = new ParallelContext()')        
         h('objref coords2') 
         h('coords2 = new Vector(3)')
-        for s in data: 
-            k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
-            k=s #such that it is not prevented from updating
-            itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
-            for i,t in itercell :                          
-                iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)               
-                for (seg,sec) in iterseg:
-                    secold=sec.name()
-                    segxold=seg.x
-                    h('objref cell1')
-                    h('cell1=pc.gid2cell('+str(i)+')')
-                    secnames = sec.name()
-                    cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
-                    h(str('coords2.x[2]=') + str('z_xtra(')
-                      + str(seg.x) + ')')
-                    h(str('coords2.x[1]=') + str('y_xtra(')
-                      + str(seg.x) + ')')
-                    h(str('coords2.x[0]=') + str('x_xtra(')
-                    + str(seg.x) + ')')
-        
-                    h('coordsx=0.0')
-                    h.coordsx = k['coords'][0]
-                    h('coordsy=0.0')
-                    h.coordsy = k['coords'][1]
-                    h('coordsz=0.0')
-                    h.coordsz = k['coords'][2]  
-        #h('coordsx') and coordsx are not tautolous they are
-        #One is a variable in the HOC space, the other is in
-        #coordsx from the Python space has been broadcast ov      
-                    coordsx = float(k['coords'][0])
-                    coordsy = float(k['coords'][1])
-                    coordsz = float(k['coords'][2])
-          
-          #Find the euclidian distance between putative presynaptic segments, 
-          #and putative post synaptic segments.    
-          #If the euclidian distance is below an allowable threshold in micro 
-          #meters, continue on with code responsible for assigning a 
-          #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
-          
-          
-                    r = 0.
-                    import math
-                    r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
-                    gidn=k['gid']    
-                    r = float(r)                      
-                    self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
+        self.debugdata=data
+        for q,s in enumerate(data):
+            if q<len(data):
+                left=(str(s[q]['secnames'])+str(s[q]['seg']))
+                right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
+                assert left!=right
+                print s[q]['secnames'], str(s[q]['seg']), '!=', s[q+1]['secnames'], str(s[q+1]['seg'])
+                print left!= right            
+
+                #pdb.set_trace()
+            for t in s:
+                k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
+                k=t #such that it is not prevented from updating
+                type(k), len(k)
+                #pdb.set_trace() 
+                k['secnames']
+                itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
+                #pdb.set_trace() 
+    
+                for i,t in itercell :                          
+                    iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)               
+                    for (seg,sec) in iterseg:
+                        #secold=sec.name()
+                        segxold=seg.x
+                        h('objref cell1')
+                        h('cell1=pc.gid2cell('+str(i)+')')
+                        secnames = sec.name()
+                        cellind = int(secnames[secnames.find('Cell[') + 5:secnames.find('].')])  # This is the index of the post synaptic cell.
+                        h(str('coords2.x[2]=') + str('z_xtra(')
+                          + str(seg.x) + ')')
+                        h(str('coords2.x[1]=') + str('y_xtra(')
+                          + str(seg.x) + ')')
+                        h(str('coords2.x[0]=') + str('x_xtra(')
+                        + str(seg.x) + ')')
+            
+                        h('coordsx=0.0')
+                        h.coordsx = k['coords'][0]
+                        h('coordsy=0.0')
+                        h.coordsy = k['coords'][1]
+                        h('coordsz=0.0')
+                        h.coordsz = k['coords'][2]  
+            #h('coordsx') and coordsx are not tautolous they are
+            #One is a variable in the HOC space, the other is in
+            #coordsx from the Python space has been broadcast ov      
+                        coordsx = float(k['coords'][0])
+                        coordsy = float(k['coords'][1])
+                        coordsz = float(k['coords'][2])
+              
+              #Find the euclidian distance between putative presynaptic segments, 
+              #and putative post synaptic segments.    
+              #If the euclidian distance is below an allowable threshold in micro 
+              #meters, continue on with code responsible for assigning a 
+              #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
+              
+              
+                        r = 0.
+                        import math
+                        r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
+                        gidn=k['gid']    
+                        r = float(r)                      
+                        self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
 
 
 
@@ -569,21 +594,29 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref pc')
         h('pc = new ParallelContext()')        
         coordict=None
-        coordictlist=None
+        coordictlist=[]
+
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
             for s in xrange(0, SIZE):
-                celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
-                for (i,j) in celliter:  
-                    #pdb.set_trace()
+                coordictlist=[]
 
+                #celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
+                celliter= iter(i for i in self.celldict.keys())  
+                for i in celliter:  
+                    #pdb.set_trace()
+                    print 'tx on rank ', COMM.rank
                     cell1=pc.gid2cell(i)
-                    coordictlist=self.nestedpre_test(i)
+                    coordictlist.append(self.nestedpre_test(i))
+                    #COMM.barrier()
                 data = COMM.bcast(coordictlist, root=s)  # ie root = rank
                 if len(data) != 0:
                     #pdb.set_trace()
                     self.nestedpost_test(data)
+                    print 'rx on rank ', COMM.rank
+                    print len(data)
+                    #data=0
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
             assert len(self.synapse_list)!=0
