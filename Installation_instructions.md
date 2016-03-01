@@ -86,6 +86,15 @@ export PATH=$N/$CPU/bin:$PATH
 ```
 
 ##After NEURON+Python+MPI is built:
+
+##More Python packages required that are required beyond the operation of NEURON+Python+MPI 
+Install Quartz X11 for OSX
+Use macports/apt-get to install python27 in addition to the version of Python that ships with OSX.
+
+```sh
+sudo pip install allensdk glob2 unittest
+```
+
 Once NEURON+Python+MPI has been successfuly built, the next step is to build the NMODL code. The NMODL code is comprised by files with the extension .mod.
 
 Currently the main directory contains the *.mod files (TODO move these to a seperate directory). Navigating to the root 3Drodent dir and executing 
