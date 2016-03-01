@@ -513,7 +513,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('coords2 = new Vector(3)')
         self.debugdata=data
         for q,s in enumerate(data):
-            if q<len(data):
+            if q<len(data)-1:
+                print q, len(data)
                 left=(str(s[q]['secnames'])+str(s[q]['seg']))
                 right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
                 assert left!=right
