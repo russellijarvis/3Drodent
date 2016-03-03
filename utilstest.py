@@ -47,7 +47,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
         self.visited = np.zeros((self.NCELL, self.NCELL))
-
         self.ecg = networkx.DiGraph()
         self.icg = networkx.DiGraph()
         #if self.RANK==0:        
@@ -57,8 +56,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.my_ecg = networkx.DiGraph()
         self.my_icg = networkx.DiGraph()
         self.debugdata=[]
-
-        #self.pc=h.pc
 
     def __del__(self):
         """
@@ -140,9 +137,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        #from neuron import h
         pc=h.ParallelContext()
-        
         morphs=[]
         cells1=[]
         self.initialize_hoc()
@@ -160,7 +155,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             morphology.root
             morphs.append(morphology)
         return morphs,swclist,cells1
-
 
     def make_cells(self,polarity):
         h=self.h    
@@ -182,12 +176,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             if 'pyramid' in d[i]:            
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1
+                #pdb.set_trace()
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            
                 #inhibitory cell.
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
-                cell.polarity=0            
+                cell.polarity=0           
+                #pdb.set_trace()
+ 
             #pdb.set_trace()
 
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
@@ -224,7 +221,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
     
-    def matrix_reduce(self):
+    def matrix_reduce(self, matrix=None):
         # TODO make this method argument based so it can handle arbitary input matrices not one in particular
         #
         import networkx as nx
@@ -234,6 +231,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         import numpy as np
 
+        ##Argument matrix.
+        if matrix!=None:
+            self.my_matrix = np.zeros_like(self.matrix)
+            COMM.Reduce([self.matrix, MPI.DOUBLE], [self.my_matrix, MPI.DOUBLE], op=MPI.SUM,
+                        root=0)
+            
+        ##Standard matrices that will always need to be reduced.    
         COMM.Barrier()
         self.my_visited = np.zeros_like(self.visited)
         COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
@@ -522,7 +526,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     assert left!=right
                     print s[q]['secnames'], str(s[q]['seg']), '!=', s[q+1]['secnames'], str(s[q+1]['seg'])
                     print left!= right            
-            test_wiring()
+            test_wiring(q,s,data)
                 #pdb.set_trace()
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 

@@ -20,9 +20,21 @@ import pickle
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 import unittest
 from utilstest import Utils
+import pdb
 config = Config().load('config.json')
-utils = Utils(config,NCELL=20,readin=0)
+
+def read_local_json():
+    from allensdk.api import api
+    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
+read_local_json()
+#pdb.set_trace()
+
+
+utils = Utils(config,NCELL=20,readin=1)
+#pdb.set_trace()
+
 info_swc=utils.gcs(utils.NCELL)
+#pdb.set_trace()
 #utils.setup_iclamp_step(, target_cell, amp, delay, dur)
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
@@ -37,7 +49,7 @@ if utils.COMM.rank==0:
     hubs.hubs()
     print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
 #Does the insertion of an IClamp work 
-hubs=NetStructure(utils,utils.ecm,utils.icm,utils.celldict)
+hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.hubs()
 print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
 #In addition to stimulating the out degree hub, stimulate the first cell on each host,
@@ -72,8 +84,8 @@ os.chdir("/home/russell/tigramite_1.3")
 #import http_server as hs
 #hs.load_url('force.json')
 
-#morphs,swclist,cells1=read_local_swc()        
-#cells1
+'''
+
 def mkjson(): #Only ascii as in dictionary contents
     from allensdk.core.json_utilities import write
 
@@ -83,17 +95,16 @@ def mkjson(): #Only ascii as in dictionary contents
     return 0
 
 
+#morphs,swclist,cells1=read_local_swc()        
+#cells1
 
-'''
-def read_local_json():
-    from allensdk.api import api
-    f1= open('neuron_models_from_query_builder.json')
-    information = api.load(f1)
-    return information
-information=read_local_json()
-'''
 
 #bp.cache_data(395310469, working_directory='neuronal_model')
 #for i in information['msg']:    
 #    bp.cache_data(i['id'], working_directory='neuronal_model')
 
+#f1 = open('/home/russell/git/allen/neuron_models_from_query_builder.json')
+#f1= open('neuron_models_from_query_builder.json')
+#information = api.load(f1)
+#return information
+'''
