@@ -169,24 +169,30 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         for i in itergids:
-            cell = h.mkcell(d[i][3])
-            cell.geom_nseg()
+
+            #cell = self.h.cell()
+            pdb.set_trace()
+            cell = h.mkcell( d[i][3])            
+            print cell, d[i][3]
+            #self.generate_morphology(cell,d[i][3])
+
+            #cell.geom_nseg()
             cell.gid1=i #itergids.next()
             #excitatory cell.
-            if 'pyramid' in d[i]:            
+            if 'pyramid' in d[i]:
+                
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
+
                 cell.polarity=1
-                #pdb.set_trace()
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            
                 #inhibitory cell.
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
+ 
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0           
-                #pdb.set_trace()
  
-            #pdb.set_trace()
-
+ 
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
@@ -515,17 +521,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('pc = new ParallelContext()')        
         h('objref coords2') 
         h('coords2 = new Vector(3)')
-        self.debugdata=data
+        #self.debugdata=data
         for q,s in enumerate(data):
             
             def test_wiring(q,s,data):
                 if q<len(data)-1:
-                    print q, len(data)
                     left=(str(s[q]['secnames'])+str(s[q]['seg']))
                     right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
                     assert left!=right
-                    print s[q]['secnames'], str(s[q]['seg']), '!=', s[q+1]['secnames'], str(s[q+1]['seg'])
-                    print left!= right            
+                    #print s[q]['secnames'], str(s[q]['seg']), '!=', s[q+1]['secnames'], str(s[q+1]['seg'])
+                    #print left!= right       
+                    #print q, len(data)
+                         
             test_wiring(q,s,data)
                 #pdb.set_trace()
             for t in s:
@@ -691,19 +698,31 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #print('Or copy all files in force/ to webserver and load force/force.html')
 
 
+        
 
     def generate_morphology(self, cell, morph_filename):
-        h = self.h
         
+        h = self.h
         swc = self.h.Import3d_SWC_read()
         swc.input(morph_filename)
         imprt = self.h.Import3d_GUI(swc, 0)
+        h('execute("forall delete_section()",cell)')
         imprt.instantiate(cell)
+        print type(cell), cell
+        
+        for sec in cell.allsec():
+            print sec
         
         for seg in cell.soma[0]:
             seg.area()
+        
+        #for sec in cell.all():
+        #    print sec.name()
+        for sec in cell.allsec():
+            print sec.name()
 
-        for sec in cell.all():
+        #pdb.set_trace()
+        for sec in cell.allsec():
             sec.nseg = 1 + 2 * int(sec.L / 40)
         h.define_shape()
         
@@ -736,6 +755,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             for sec in sections:
                 sec.push()
                 if p["mechanism"] != "":
+                    print p["mechanism"]
                     sec.insert(p["mechanism"])
                     h('print psection()')
                 setattr(sec, p["name"], p["value"])
