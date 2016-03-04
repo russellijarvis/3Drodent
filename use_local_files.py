@@ -15,10 +15,10 @@ from allensdk.core.nwb_data_set import NwbDataSet
 import glob
 from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
-import d3py
+#import d3py
 import pickle
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
-import unittest
+#import unittest
 from utilstest import Utils
 config = Config().load('config.json')
 utils = Utils(config,NCELL=20,readin=0)
