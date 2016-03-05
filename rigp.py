@@ -10,13 +10,14 @@ from mpi4py import MPI
 #how to pass attributes from one object into this cls type object?
 
 class NetStructure():
-    def __init__(self,utils,my_ecm,my_icm,celldict):
+    def __init__(self,utils,my_ecm,my_icm,visited,celldict):
        #assert rank=0
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
         self.my_ecm=my_ecm
         self.my_icm=my_icm
+        self.my_visited=visited
         self.indegree=0
         self.outdegree=0
         self.celldict=celldict
@@ -32,26 +33,20 @@ class NetStructure():
 
     def hubs(self):
         import numpy as np
-        out_degree = np.where(self.my_ecm == np.max(self.my_ecm)
-        print out_degree, ' out degree'
-        
-        for i in self.my_ecm.tolist():
-            if(sum(i)>self.old_sum):
-                self.old_sum=sum(i)
-                self.indegree=i
-                print sum(i), i, self.old_sum
-        self.old_sum=0    
-        for i in self.my_ecm.transpose().tolist():
-            if(sum(i)>self.old_sum):
-                self.old_sum=sum(i)
-                self.outdegree=i
-                print sum(i), i, self.old_sum
-        self.old_sum=0    
+        self.out_degree = np.where(self.my_ecm == np.max(self.my_ecm))[0][0]
+        self.in_degree = np.where(self.my_ecm.transpose() == np.max(self.my_ecm))[0][0]
         if self.outdegree in self.celldict.keys():
             #utils.setup_iclamp_step(self.utils.cells[0], 0.27, 1020.0, 750.0)
             print 'out degree hub is', self.outdegree
             self.setup_iclamp_step(self.celldict[int(self.outdegree)], 0.27, 1020.0, 750.0) 
 
+        if self.indegree in self.celldict.keys():
+            #utils.setup_iclamp_step(self.utils.cells[0], 0.27, 1020.0, 750.0)
+            print 'out degree hub is', self.outdegree
+            self.setup_iclamp_step(self.celldict[int(self.indegree)], 0.27, 1020.0, 750.0)  
+        print self.out_degree, ' out degree'        
+        print self.in_degree, ' in degree '
+        
     def save_matrix(self):    
         SIZE=self.SIZE
         RANK=self.RANK

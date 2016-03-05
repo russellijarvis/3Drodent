@@ -170,13 +170,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         for i in itergids:
 
-            #cell = self.h.cell()
-            pdb.set_trace()
             cell = h.mkcell( d[i][3])            
             print cell, d[i][3]
             #self.generate_morphology(cell,d[i][3])
 
-            #cell.geom_nseg()
+            cell.geom_nseg()
             cell.gid1=i #itergids.next()
             #excitatory cell.
             if 'pyramid' in d[i]:
@@ -632,6 +630,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             assert len(self.synapse_list)!=0
             with open(fname, 'wb') as handle:
                 pickle.dump(self.synapse_list, handle)
+            fname='visited'+str(RANK)+'.p'
+            with open(fname, 'wb') as handle:
+                pickle.dump(self.visited,handle)
         else:
             fname='synapse_list'+str(RANK)+'.p'
             with open(fname, 'rb') as handle:

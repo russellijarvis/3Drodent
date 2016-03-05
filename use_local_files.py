@@ -19,17 +19,9 @@ from allensdk.model.biophys_sim.config import Config
 import pickle
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 #import unittest
-from utilstest import Utils
+from utils import Utils
 import pdb
 config = Config().load('config.json')
-
-def read_local_json():
-    from allensdk.api import api
-    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
-read_local_json()
-#pdb.set_trace()
-
-
 utils = Utils(config,NCELL=20,readin=1)
 #pdb.set_trace()
 
@@ -58,12 +50,33 @@ utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 # configure recording
 utils.spikerecord()
 vec = utils.record_values()
+
+
+import matplotlib 
+matplotlib.use('Agg') 
+import matplotlib.pyplot as plt
+fig = plt.figure()
+fig.clf()
+
+for gid,v in vec['v'].iteritems():
+    print v.to_python()
+    plt.plot(vec['t'].to_python(),v.to_python())
+fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
+#import numpy as np
+
+plt.xlabel('columns = targets')
+plt.ylabel('rows = sources')
+plt.title('Ecitatory Adjacency Matrix')
+plt.grid(True)
+
+     
 print 'setup recording'
-tstop = 1000
+tstop = 5000
 utils.COMM.barrier()
 utils.prun(tstop)
 tvec=utils.tvec.to_python()
 idvec=utils.idvec.to_python()
+utils.vec_reduce()
 print tvec
 print idvec
 #Probably just get the spike distance.
@@ -108,3 +121,9 @@ def mkjson(): #Only ascii as in dictionary contents
 #information = api.load(f1)
 #return information
 '''
+#def read_local_json():
+#    from allensdk.api import api
+#    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
+#read_local_json()
+#pdb.set_trace()
+
