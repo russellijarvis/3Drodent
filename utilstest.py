@@ -171,7 +171,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         for i in itergids:
 
             #cell = self.h.cell()
-            pdb.set_trace()
+            #pdb.set_trace()
             cell = h.mkcell( d[i][3])            
             print cell, d[i][3]
             #self.generate_morphology(cell,d[i][3])

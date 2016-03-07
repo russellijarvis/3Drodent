@@ -19,22 +19,21 @@ import d3py
 import pickle
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 import unittest
-from utilstest import Utils
 import pdb
+
+from utilstest import Utils
 config = Config().load('config.json')
 
-def read_local_json():
-    from allensdk.api import api
-    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
-read_local_json()
-#pdb.set_trace()
+print config, type(config)
+#def read_local_json():
+#    from allensdk.api import api
+#    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
+#read_local_json()
 
 
 utils = Utils(config,NCELL=20,readin=1)
-#pdb.set_trace()
 
 info_swc=utils.gcs(utils.NCELL)
-#pdb.set_trace()
 #utils.setup_iclamp_step(, target_cell, amp, delay, dur)
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
@@ -59,7 +58,7 @@ utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
-tstop = 1000
+tstop = 10
 utils.COMM.barrier()
 utils.prun(tstop)
 tvec=utils.tvec.to_python()
