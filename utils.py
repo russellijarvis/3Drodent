@@ -161,6 +161,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
+        h('objref tvec, gidvec')
+        h('gidvec = new Vector()')
+        h('tvec = new Vector()')
+
+        #self.h.tvec=self.h.Vector()
+        #self.h.gidvec=self.h.Vector()
+        
         #from neuron import h
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)}         
@@ -176,6 +183,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
             cell.geom_nseg()
             cell.gid1=i #itergids.next()
+            h('pc.spike_record('+str(i)+',tvec,gidvec)')
+
             #excitatory cell.
             if 'pyramid' in d[i]:
                 
@@ -235,7 +244,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         import numpy as np
 
-        ##Argument matrix.
+        ##Argument matrix
         if matrix!=None:
             self.my_matrix = np.zeros_like(self.matrix)
             COMM.Reduce([self.matrix, MPI.DOUBLE], [self.my_matrix, MPI.DOUBLE], op=MPI.SUM,
@@ -257,6 +266,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.my_ecg = nx.DiGraph(self.my_ecg)
         if RANK==0:
             assert np.sum(self.my_ecm)!=0
+        if RANK==0:
+            assert np.sum(self.my_icm)!=0
+        if RANK==0:
+            assert np.sum(self.my_visited)!=0
         
 
     def vec_reduce(self):#,idvec,tvec):       
@@ -607,23 +620,33 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
             for s in xrange(0, SIZE):
+                #Synchronise processes here, all ranks must have finished receiving 
+                #transmitted material before another transmission of the coordictlis begins, potentially
+                #overwritting a coordictlist before it has been properly exhausted.
+                COMM.barrier() #New line could save CPU but functional? Can be removed
+                
                 coordictlist=[]
                 if COMM.rank==s: #New line could save CPU but functional? Can be removed
+                    print 'begin creating message for transmision on rank ', COMM.rank
                     #celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
-                        #pdb.set_trace()
-                        print 'tx on rank ', COMM.rank
                         cell1=pc.gid2cell(i)
                         coordictlist.append(self.nestedpre_test(i))
-                    
-                COMM.barrier() #New line could save CPU but functional? Can be removed
+                    print 'end tx on rank ', COMM.rank
+
+                #All CPUs wait here so that recieving only occurs when the rank==s has finished
+                #tranmsitting this is probably unnecessary.
+                #COMM.barrier() #New line could save CPU but functional? Can be removed                    
                 data = COMM.bcast(coordictlist, root=s)  # ie root = rank
+                print 'checking for rx on rank ', COMM.rank
+
                 if len(data) != 0:
-                    #pdb.set_trace()
+                    print 'receieved rx on rank ', COMM.rank
                     self.nestedpost_test(data)
-                    print 'rx on rank ', COMM.rank
+                    print 'using received message on rank ', COMM.rank
                     print len(data)
+
                     #data=0
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
