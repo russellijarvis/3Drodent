@@ -7,7 +7,7 @@ This model needs an installation of NEURON-7.3/NEURON-7.4 configured to work wit
 
 ##Installation Instructions 
 
-Instructions for Ubuntu-Linux are coming, this file should be updated in May 2016 a month after the release of Ubuntu Ubuntu 16.04 LTS Xenial Xerus April 2016. Note the Ubuntu instructions should be very similar to the OSX instructions, except that apt-get is used in place of macports.
+Instructions for Ubuntu-Linux are coming, this file should be updated in May 2016 a month after the release of Ubuntu 16.04 LTS Xenial Xerus April 2016. Note the Ubuntu instructions should be very similar to the OSX instructions, except that apt-get is used in place of macports.
 
 ##Instructions for OSX.
 
