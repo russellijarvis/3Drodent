@@ -10,14 +10,14 @@ from mpi4py import MPI
 #how to pass attributes from one object into this cls type object?
 
 class NetStructure():
-    def __init__(self,utils,my_ecm,my_icm,visited,celldict):
+    def __init__(self,utils,my_ecm,my_icm,my_visited,celldict):
        #assert rank=0
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
         self.my_ecm=my_ecm
         self.my_icm=my_icm
-        self.my_visited=visited
+        self.my_visited=my_visited
         self.indegree=0
         self.outdegree=0
         self.celldict=celldict
@@ -70,8 +70,22 @@ class NetStructure():
         assert np.sum(self.my_ecm)!=0
         assert np.sum(self.my_icm)!=0
 
-        im = plt.imshow(self.my_ecm, interpolation='nearest')
-    
+        fig = plt.figure()
+        fig.clf()
+        im = plt.imshow(self.my_visited, interpolation='nearest')    
+        plt.autoscale(True)
+        plt.colorbar(im)
+        plt.xlabel('columns = targets')
+        plt.ylabel('rows = sources')
+        plt.title('visited Adjacency Matrix')
+        plt.grid(True)
+        sfin = 'visited_Adjacency_Matrix.png'
+        fig.savefig(sfin)
+
+
+        fig = plt.figure()
+        fig.clf()
+        im = plt.imshow(self.my_ecm, interpolation='nearest')    
         plt.autoscale(True)
         plt.colorbar(im)
         plt.xlabel('columns = targets')
@@ -81,6 +95,7 @@ class NetStructure():
     
         sfin = 'Excitatory_Adjacency_Matrix.png'
         fig.savefig(sfin)
+
         fig = plt.figure()
         fig.clf()
     
@@ -92,7 +107,7 @@ class NetStructure():
         plt.ylabel('rows = sources')
         plt.title('Inhibitory Adjacency Matrix')
         plt.grid(True)
-    
+
         sfin = 'Inhibitory_Adjacency_Matrix.png'
         fig.savefig(sfin)
 

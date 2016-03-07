@@ -23,10 +23,11 @@ from utils import Utils
 import pdb
 config = Config().load('config.json')
 utils = Utils(config,NCELL=20,readin=1)
-info_swc=utils.gcs(utils.NCELL)
 
+info_swc=utils.gcs(utils.NCELL)
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
+#utils.graph_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -52,6 +53,7 @@ utils.spikerecord()
 vec = utils.record_values()
 
 
+
      
 print 'setup recording'
 tstop = 1150
@@ -69,10 +71,11 @@ for gid,v in vec['v'].iteritems():
     print v.to_python()
     plt.plot(vec['t'].to_python(),v.to_python())
 fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
+#import numpy as np
 
-plt.xlabel('time (ms)')
-plt.ylabel('Voltage (mV)')
-plt.title('traces')
+plt.xlabel('columns = targets')
+plt.ylabel('rows = sources')
+plt.title('Ecitatory Adjacency Matrix')
 plt.grid(True)
 
 

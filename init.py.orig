@@ -23,10 +23,16 @@ from utils import Utils
 import pdb
 config = Config().load('config.json')
 utils = Utils(config,NCELL=20,readin=1)
+<<<<<<< HEAD:init.py
+
+info_swc=utils.gcs(utils.NCELL)
+=======
 info_swc=utils.gcs(utils.NCELL)
 
+>>>>>>> a2b59edc85cddfd3829a37724c2c72f364885676:use_local_files.py
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
+#utils.graph_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -50,6 +56,15 @@ utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 # configure recording
 utils.spikerecord()
 vec = utils.record_values()
+print 'setup recording'
+tstop = 1500
+utils.COMM.barrier()
+utils.prun(tstop)
+tvec=utils.tvec.to_python()
+idvec=utils.idvec.to_python()
+#utils.vec_reduce()
+print tvec
+print idvec
 
 
      
@@ -75,6 +90,7 @@ plt.ylabel('Voltage (mV)')
 plt.title('traces')
 plt.grid(True)
 
+<<<<<<< HEAD:init.py
 
 print utils.h.tvec.to_python()
 print utils.h.gidvec.to_python()
@@ -83,6 +99,11 @@ print utils.h.gidvec.to_python()
 #utils.vec_reduce()
 #if utils.RANK==0:
 #    vecs=zip(utils.my_tvec,utils.my_idvec)
+=======
+utils.vec_reduce()
+if utils.RANK==0:
+    vecs=zip(utils.my_tvec,utils.my_idvec)
+>>>>>>> a2b59edc85cddfd3829a37724c2c72f364885676:use_local_files.py
 with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
     pickle.dump(utils.my_tvec, handle)    
 #system.

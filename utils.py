@@ -1,3 +1,10 @@
+'''
+Author information. This is an extension to the Utils class from Allen Brain API. 
+The parallel wiring related functions are written by Russell Jarvis Russell Jarvis russell_jarvis@riseup.net
+https://www.linkedin.com/in/russell-jarvis-02433a30?trk=hp-identity-name
+'''
+
+
 from allensdk.model.biophys_sim.neuron.hoc_utils import HocUtils
 import logging
 import glob
@@ -19,7 +26,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
     def __init__(self, description, NCELL=20,readin=0):
         super(Utils, self).__init__(description)
-        # Logically the pc, and py object attributes of the HOC object should be initialized here too.
         h=self.h  
         h('objref pc, py')
         h('pc = new ParallelContext()')
@@ -49,59 +55,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.visited = np.zeros((self.NCELL, self.NCELL))
         self.ecg = networkx.DiGraph()
         self.icg = networkx.DiGraph()
-        #if self.RANK==0:        
         self.my_visited = np.zeros_like(self.icm)
         self.my_icm = np.zeros_like(self.icm)
         self.my_ecm = np.zeros_like(self.ecm)
         self.my_ecg = networkx.DiGraph()
         self.my_icg = networkx.DiGraph()
         self.debugdata=[]
-
-    def __del__(self):
-        """
-        AUTHORS:
-        - THOMAS MCTAVISH (2010-11-04): initial version. Modified version of the
-                project by Hines and Carnevale. (Hines M.L. and Carnevale N.T, 
-                Translating network models to parallel hardware in NEURON,
-                Journal of Neuroscience Methods 169 (2008) 425-455).
-        In the case of multiple runs where NEURON is not quit and reloaded,
-        we need to clear NEURON so that we can run a new network.
-        There is a particular order that things need to be deleted:
-        1) Any recording vectors
-        2) pc.gid_clear(0)
-        3) Destroy NetCons
-        4) Destroy Cells
-        """
-        self.t_vec = [] # Must come before gid_clear
-        self.id_vec = [] # Must come before gid_clear
-        self.pc.gid_clear(0)
-        self.nclist = []  # Synaptic NetCon list on this host
-        self.stim = None
-        self.cells = []          # Cells on this host
-        # I do not know how to refer to relative paths in Python, 
-        # the below emulates a call to a relative path.
-
-    def register_gid(self, gid, source, section=None):
-        """- THOMAS MCTAVISH (2010-11-04): initial version. Modified version of the
-                project by Hines and Carnevale. (Hines M.L. and Carnevale N.T, 
-                Translating network models to parallel hardware in NEURON,
-                Journal of Neuroscience Methods 169 (2008) 425-455).
-        
-        Register a global ID with the global `ParallelContext` instance."""
-        ###print "registering gid %s to %s (section=%s)" % (gid, source, section)
-        self.parallel_context.set_gid2node(gid, self.mpi_rank) # assign the gid to this node
-        if is_point_process(source):
-            nc = h.NetCon(source, None)                          # } associate the cell spike source
-        else:
-            nc = h.NetCon(source, None, sec=section)
-        self.parallel_context.cell(gid, nc)                     # } with the gid (using a temporary NetCon)
-        self.gid_sources.append(source) # gid_clear (in _State.reset()) will cause a
-                                        # segmentation fault if any of the sources
-                                        # registered using pc.cell() no longer exist, so
-                                        # we keep a reference to all sources in the
-                                        # global gid_sources list. It would be nicer to
-                                        # be able to unregister a gid and have a __del__
-                                        # method in ID, but this will do for now.
 
     def prep_list(self):                    
         '''
@@ -143,32 +102,39 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.initialize_hoc()
         swclist=glob.glob('*.swc')
         itergids = iter( i for i in range(RANK, len(swclist), SIZE) )
-
-        #for swcf, i in enumerate(swclist):
         for i in itergids:
             cell = h.mkcell(swclist[i])
             self.generate_morphology(cell,swclist[i])
             self.load_cell_parameters(cell, fit_ids[utils.cells_data[i]['type']])
             cells1.append(cell1)
-            print type(cells1)
-            print type(cell1)
             morphology.root
             morphs.append(morphology)
         return morphs,swclist,cells1
 
+    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
+    #them in the network.
+    #Call a method test_cell inside the make_cells function.
+    #def test_cell(self,type):
+    #    from neuron.unit.neuroelectro import NeuroElectroSummary
+    #    if type=='hippocampus':
+    #        summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
+    #                                    ephysprop={'name':'spike width'})
+    #        observation = summary.get_observation(show=True)
+    #        from neuronunit.tests import import SpikeWidthTest
+    #        ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+            
+            
     def make_cells(self,polarity):
         h=self.h    
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
+        tvec=h.Vector()
+        gidvec=h.Vector()
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-
-        #self.h.tvec=self.h.Vector()
-        #self.h.gidvec=self.h.Vector()
-        
-        #from neuron import h
+        #self.testcell(type)
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)}         
         itergids = iter( i for i in range(RANK, NCELL, SIZE) )        
@@ -176,33 +142,28 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         for i in itergids:
-
-            cell = h.mkcell( d[i][3])            
+            cell = h.mkcell(d[i][3])            
             print cell, d[i][3]
-            #self.generate_morphology(cell,d[i][3])
-
             cell.geom_nseg()
             cell.gid1=i #itergids.next()
-            h('pc.spike_record('+str(i)+',tvec,gidvec)')
-
+            
             #excitatory cell.
-            if 'pyramid' in d[i]:
-                
+            if 'pyramid' in d[i]:                
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
-
                 cell.polarity=1
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            
                 #inhibitory cell.
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
- 
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0           
- 
- 
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
+            hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
+            h(hocstring)
+            pc.spike_record(i,tvec,gidvec)
+            
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
@@ -226,7 +187,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.make_cells(bothtrans)
         len(h.List('NetCon'))                        
         pol=[ a.polarity for a in self.cells ]       
-        print np.sum(pol)
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
         self.h('forall{ for(x,0){ insert xtra }}')
@@ -268,13 +228,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             assert np.sum(self.my_ecm)!=0
         if RANK==0:
             assert np.sum(self.my_icm)!=0
-        if RANK==0:
-            assert np.sum(self.my_visited)!=0
+        #TODO check if visited is empty.
+        #if RANK==0:
+        #    assert np.sum(self.my_visited)!=0
         
 
-    def vec_reduce(self):#,idvec,tvec):       
+    def vec_reduce(self):       
         print type(np.array(self.idvec.to_python()))
-        #print type(np.array(tvec))
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -341,12 +301,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
 
     def nestedpre_test(self,j):
-        #from neuron import h
+        '''Author Russell Jarvis russell_jarvis@riseup.net'''
+
         h=self.h   
         pc=h.ParallelContext()
         shiplist=[]
-        #coordict={}
-        #pc=h.pc
         h('objref coords') 
         h('coords = new Vector(3)')
         #self.celldict.items()[0]
@@ -354,8 +313,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             seglist= iter( (seg, sec, self.celldict[j]) for sec in self.celldict[j].spk_trig_ls for seg in sec )     
             for (seg,sec, cellc) in seglist:
                 sec.push()
-                #sec.nseg
-                #for (seg,sec, cellc) in seglist:
                 get_cox = str('coords.x[0]=x_xtra('
                               + str(seg.x) + ')')
                 h(get_cox)                   
@@ -373,8 +330,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 coordict['gid']= int(j)
                 coordict['seg']= seg.x                    
                 secnames = self.h.cas().name()#sec.name()  
-                #print secnames, seg.x                       
-                #shiplist.append((secnames,seg.x))
                 coordict['secnames'] = str(secnames)
                 shiplist.append(coordict)
                 self.h.pop_section()
@@ -382,6 +337,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
+        '''Author Russell Jarvis russell_jarvis@riseup.net'''
+
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -396,28 +353,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #TODO pickle load the graphs here instead of making them manually.
             self.ecg.add_edge(i,gidn,weight=r/0.4)
             self.ecm[i][gidn] = self.ecm[i][gidn] + 1
-            #self.ecg.add_edge(i,gidn,weight=r/0.4)
-            #self.ecg[i][gidn]['post_loc']=secnames
-            #self.ecg[i][gidn]['pre_loc']=str(sec.name())
-            #self.seclists.append(secnames)
             assert np.sum(self.ecm)!=0
-            #Add other edge attributes like secnames etc.
         else:
-            #self.icg.add_edge(i,gidn,weight=r/0.4)
+            self.icg.add_edge(i,gidn,weight=r/0.4)
             self.icm[i][gidn] = self.icm[i][gidn] + 1
             self.icg.add_edge(i,gidn,weight=r/0.4)
-            #self.icg[i][gidn]['post_loc']=secnames
-            #self.icg[i][gidn]['pre_loc']=str(sec.name())
-
-            assert np.sum(self.icm)!=0
-                
-            #Add other edge attributes like secnames etc.
-
-                  
+            assert np.sum(self.icm)!=0                
+            #TODO Add other edge attributes like secnames etc.
         h('objref syn_')   
-
         h(post_syn)
-        print post_syn
         syn_=h.syn_
         h.syn_.cid=i
         h.Cell[cellind].ampalist.append(h.syn_)
@@ -431,6 +375,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
+        '''Author Russell Jarvis russell_jarvis@riseup.net'''
+        
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -454,12 +400,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 assert np.sum(self.icm)!=0
         
             else:
-                #TODO modify mod file for exp2syn such that cid exists.
-                #Also because exp2syn is an inbuilt mechanism need to refactor explicitly such that custom file 
-                #myexp2syn is used instead.
-                #post_syn = secnames + ' ' + 'syn_ = new exp2syn(' + str(seg.x) + ')'
-                #post_syn='syn_ = self.h.Exp2Syn('+str(seg.x)+',sec='+secnames+')'                        
-                #syn_.e = connection["erev"]
                 if (k['gid']%2==0):
                     post_syn = secnames + ' ' + 'syn_ = new ExpSid(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
@@ -480,8 +420,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
             h(post_syn)
             self.synapse_list.append((r,post_syn,cellind,k,gidn,i))
-            print post_syn,' ',k['secnames'],' ',secnames,' ',str(sec.name()) 
-            #h('print syn_')
             syn_=h.syn_
             h.syn_.cid=i
             h.Cell[cellind].ampalist.append(h.syn_)
@@ -497,6 +435,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
        
     def nestedpost_test(self,data):
         """
+        Author Russell Jarvis russell_jarvis@riseup.net
+        
         This is the inner most loop of the parallel wiring algorithm.
         13For ever GID
         For every coordinate thats received from a broadcast.
@@ -540,12 +480,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     left=(str(s[q]['secnames'])+str(s[q]['seg']))
                     right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
                     assert left!=right
-                    #print s[q]['secnames'], str(s[q]['seg']), '!=', s[q+1]['secnames'], str(s[q+1]['seg'])
-                    #print left!= right       
-                    #print q, len(data)
                          
             test_wiring(q,s,data)
-                #pdb.set_trace()
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
                 k=t #such that it is not prevented from updating
@@ -553,7 +489,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 for i,t in itercell :                          
                     iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)               
                     for (seg,sec) in iterseg:
-                        #secold=sec.name()
                         segxold=seg.x
                         h('objref cell1')
                         h('cell1=pc.gid2cell('+str(i)+')')
@@ -572,18 +507,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         h.coordsy = k['coords'][1]
                         h('coordsz=0.0')
                         h.coordsz = k['coords'][2]  
-            #h('coordsx') and coordsx are not tautolous they are
+            #h('coordsx') and coordsx are not tautolous. 
             #One is a variable in the HOC space, the other is in
             #coordsx from the Python space has been broadcast ov      
                         coordsx = float(k['coords'][0])
                         coordsy = float(k['coords'][1])
                         coordsz = float(k['coords'][2])
               
-              #Find the euclidian distance between putative presynaptic segments, 
-              #and putative post synaptic segments.    
-              #If the euclidian distance is below an allowable threshold in micro 
-              #meters, continue on with code responsible for assigning a 
-              #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
+            #Find the euclidian distance between putative presynaptic segments, 
+            #and putative post synaptic segments.    
+            #If the euclidian distance is below an allowable threshold in micro 
+            #meters, continue on with code responsible for assigning a 
+            #synapse, and a netcon. Neurons parallel context class can handle the actual message passing associated with sending and receiving action potentials on different hosts.                               
               
               
                         r = 0.
@@ -624,11 +559,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 #transmitted material before another transmission of the coordictlis begins, potentially
                 #overwritting a coordictlist before it has been properly exhausted.
                 COMM.barrier() #New line could save CPU but functional? Can be removed
-                
                 coordictlist=[]
                 if COMM.rank==s: #New line could save CPU but functional? Can be removed
                     print 'begin creating message for transmision on rank ', COMM.rank
-                    #celliter= iter( (i, j) for i,j in self.celldict.iteritems() )  
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
                         cell1=pc.gid2cell(i)
@@ -636,18 +569,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     print 'end tx on rank ', COMM.rank
 
                 #All CPUs wait here so that recieving only occurs when the rank==s has finished
-                #tranmsitting this is probably unnecessary.
-                #COMM.barrier() #New line could save CPU but functional? Can be removed                    
+                #tranmsitting              
                 data = COMM.bcast(coordictlist, root=s)  # ie root = rank
                 print 'checking for rx on rank ', COMM.rank
-
                 if len(data) != 0:
                     print 'receieved rx on rank ', COMM.rank
                     self.nestedpost_test(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
 
-                    #data=0
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
             assert len(self.synapse_list)!=0
@@ -659,16 +589,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         else:
             fname='synapse_list'+str(RANK)+'.p'
             with open(fname, 'rb') as handle:
-                #print pickle.load(handle)
                 self.synapse_list=pickle.load(handle)
-                for s in self.synapse_list:
-                    print s
+                #for s in self.synapse_list:
                 for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
                     self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
-        import numpy as np
-        #if COMM.rank==2:
-        #    assert np.sum(self.ecm)!=0
-
+  
     def tracenet(self):
         '''
         This method does two things.
@@ -694,7 +619,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 assert type(j)!=None
                 srcind=int(j.srcgid())
                 tgtind=int(j.postcell().gid1)
-                print 'this is evidently not printing, some of these objects have been destroyed!'
                 print int(j.srcgid()),int(j.postcell().gid1),self.celldict[srcind],self.celldict[tgtind]
                 lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
         return lsoftup
@@ -719,33 +643,24 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         print('Wrote node-link JSON data to js/network.json')
         # open URL in running web browser
         #http_server.load_url('force/force.html')
-        #print('Or copy all files in force/ to webserver and load force/force.html')
 
 
         
 
     def generate_morphology(self, cell, morph_filename):
-        
+        #This code is from the Allen Brain API examples.
+
         h = self.h
         swc = self.h.Import3d_SWC_read()
         swc.input(morph_filename)
         imprt = self.h.Import3d_GUI(swc, 0)
         h('execute("forall delete_section()",cell)')
         imprt.instantiate(cell)
-        print type(cell), cell
         
-        for sec in cell.allsec():
-            print sec
+      
         
         for seg in cell.soma[0]:
             seg.area()
-        
-        #for sec in cell.all():
-        #    print sec.name()
-        for sec in cell.allsec():
-            print sec.name()
-
-        #pdb.set_trace()
         for sec in cell.allsec():
             sec.nseg = 1 + 2 * int(sec.L / 40)
         h.define_shape()
@@ -759,6 +674,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #cell.axon[1].connect(cell.axon[0], 1, 0)
     
     def load_cell_parameters(self, cell, type_index):
+        #This code is from the Allen Brain API examples.
         h=self.h
         passive = self.description.data['fit'][type_index]['passive'][0]
         conditions = self.description.data['fit'][type_index]['conditions'][0]
@@ -813,22 +729,4 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             self.h.pc.spike_record(int(cell.gid1), self.tvec, self.idvec)
 
 
-    '''
-    def proc spikeout(self):   
-        self.COMM.barrier()# // wait for all hosts to get to this point
-        if (self.COMM.rank==0):
-            print("\ntime\t cell\n") #// print header once
-    
-        for rank in xrange(0,self.COMM.size): #{ // host 0 first, then 1, 2, etc.
-            if (rank==self.COMM.rank):
-                print(fno,"%s_spt.dat", fstem)
-                fo = new File(fno)  
-                fo.aopen()
-                for i in len(tvec)#.size-1:   
-                    printf ("%g\t %d\n", tvec.x[i], idvec.x[i])
-                    fo.printf("%g\t %d\n", tvec.x[i], idvec.x[i])
-                fo.close()
-        self.COMM.barrier()
-    '''                   
-  
-        
+

@@ -23,10 +23,14 @@ from utils import Utils
 import pdb
 config = Config().load('config.json')
 utils = Utils(config,NCELL=20,readin=1)
-info_swc=utils.gcs(utils.NCELL)
+#pdb.set_trace()
 
+info_swc=utils.gcs(utils.NCELL)
+#pdb.set_trace()
+#utils.setup_iclamp_step(, target_cell, amp, delay, dur)
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
+#utils.graph_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -35,15 +39,11 @@ if utils.COMM.rank==0:
     utils.plotgraph()
     hubs.save_matrix()
     hubs.hubs()
-    print '\n', 'the following is global hub calculations'
-    print '\n', utils.COMM.rank, hubs.outdegree, " outdegree", hubs.indegree, " indegree"
-    print '\n', 'the above is global hub calculations'
-    
+    print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
 #Does the insertion of an IClamp work 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.hubs()
-print '\n', 'the following is local CPU specific hub calculations'
-print '\n', utils.COMM.rank, hubs.outdegree, " outdegree", hubs.indegree, " indegree"
+print '\n', utils.COMM.rank, hubs.outdegree, " outdegree"
 #In addition to stimulating the out degree hub, stimulate the first cell on each host,
 #To make activity more likely.
 utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
@@ -52,13 +52,6 @@ utils.spikerecord()
 vec = utils.record_values()
 
 
-     
-print 'setup recording'
-tstop = 1150
-utils.COMM.barrier()
-utils.prun(tstop)
-#tvec=utils.tvec.to_python()
-#idvec=utils.idvec.to_python()
 import matplotlib 
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
@@ -69,20 +62,28 @@ for gid,v in vec['v'].iteritems():
     print v.to_python()
     plt.plot(vec['t'].to_python(),v.to_python())
 fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
+#import numpy as np
 
-plt.xlabel('time (ms)')
-plt.ylabel('Voltage (mV)')
-plt.title('traces')
+plt.xlabel('columns = targets')
+plt.ylabel('rows = sources')
+plt.title('Ecitatory Adjacency Matrix')
 plt.grid(True)
 
-
-print utils.h.tvec.to_python()
-print utils.h.gidvec.to_python()
+     
+print 'setup recording'
+tstop = 5000
+utils.COMM.barrier()
+utils.prun(tstop)
+tvec=utils.tvec.to_python()
+idvec=utils.idvec.to_python()
+utils.vec_reduce()
+print tvec
+print idvec
 #Probably just get the spike distance.
 #Make my project open source.
-#utils.vec_reduce()
-#if utils.RANK==0:
-#    vecs=zip(utils.my_tvec,utils.my_idvec)
+utils.vec_reduce()
+if utils.RANK==0:
+    vecs=zip(utils.my_tvec,utils.my_idvec)
 with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
     pickle.dump(utils.my_tvec, handle)    
 #system.
