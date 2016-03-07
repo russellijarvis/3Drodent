@@ -1,6 +1,6 @@
 '''
 Author information. This is an extension to the Utils class from Allen Brain API. 
-The parallel wiring related functions are written by Russell Jarvis Russell Jarvis russell_jarvis@riseup.net
+The parallel wiring related functions are written by Russell Jarvis russell_jarvis@riseup.net
 https://www.linkedin.com/in/russell-jarvis-02433a30?trk=hp-identity-name
 '''
 
@@ -336,7 +336,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
-        '''Author Russell Jarvis russell_jarvis@riseup.net'''
 
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -374,7 +373,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
-        '''Author Russell Jarvis russell_jarvis@riseup.net'''
         
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -434,7 +432,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
        
     def nestedpost(self,data):
         """
-        Author Russell Jarvis russell_jarvis@riseup.net
         
         This is the inner most loop of the parallel wiring algorithm.
         13For ever GID
