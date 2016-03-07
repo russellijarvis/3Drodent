@@ -15,26 +15,16 @@ from allensdk.core.nwb_data_set import NwbDataSet
 import glob
 from allensdk.model.biophysical_perisomatic.utils import Utils
 from allensdk.model.biophys_sim.config import Config
-import d3py
+#import d3py
 import pickle
 bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
-import unittest
+#import unittest
+from utils import Utils
 import pdb
-
-from utilstest import Utils
 config = Config().load('config.json')
-
-print config, type(config)
-#def read_local_json():
-#    from allensdk.api import api
-#    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
-#read_local_json()
-
-
 utils = Utils(config,NCELL=20,readin=1)
-
 info_swc=utils.gcs(utils.NCELL)
-#utils.setup_iclamp_step(, target_cell, amp, delay, dur)
+
 utils.wirecells_test()#wire cells on different hosts.
 utils.matrix_reduce()
 #utils.graph_reduce()
@@ -58,15 +48,31 @@ utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
-tstop = 10
+tstop = 1500
 utils.COMM.barrier()
 utils.prun(tstop)
 tvec=utils.tvec.to_python()
 idvec=utils.idvec.to_python()
+#utils.vec_reduce()
 print tvec
 print idvec
-#Probably just get the spike distance.
-#Make my project open source.
+
+import matplotlib 
+matplotlib.use('Agg') 
+import matplotlib.pyplot as plt
+fig = plt.figure()
+fig.clf()
+
+for gid,v in vec['v'].iteritems():
+    print v.to_python()
+    plt.plot(vec['t'].to_python(),v.to_python())
+fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
+
+plt.xlabel('time (ms)')
+plt.ylabel('Voltage (mV)')
+plt.title('traces')
+plt.grid(True)
+
 utils.vec_reduce()
 if utils.RANK==0:
     vecs=zip(utils.my_tvec,utils.my_idvec)
@@ -107,3 +113,9 @@ def mkjson(): #Only ascii as in dictionary contents
 #information = api.load(f1)
 #return information
 '''
+#def read_local_json():
+#    from allensdk.api import api
+#    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
+#read_local_json()
+#pdb.set_trace()
+

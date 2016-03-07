@@ -33,26 +33,20 @@ class NetStructure():
 
     def hubs(self):
         import numpy as np
-        out_degree = np.where(self.my_ecm == np.max(self.my_ecm))
-        print out_degree, ' out degree'
-        
-        for i in self.my_ecm.tolist():
-            if(sum(i)>self.old_sum):
-                self.old_sum=sum(i)
-                self.indegree=i
-                print sum(i), i, self.old_sum
-        self.old_sum=0    
-        for i in self.my_ecm.transpose().tolist():
-            if(sum(i)>self.old_sum):
-                self.old_sum=sum(i)
-                self.outdegree=i
-                print sum(i), i, self.old_sum
-        self.old_sum=0    
+        self.out_degree = np.where(self.my_ecm == np.max(self.my_ecm))[0][0]
+        self.in_degree = np.where(self.my_ecm.transpose() == np.max(self.my_ecm))[0][0]
         if self.outdegree in self.celldict.keys():
             #utils.setup_iclamp_step(self.utils.cells[0], 0.27, 1020.0, 750.0)
             print 'out degree hub is', self.outdegree
             self.setup_iclamp_step(self.celldict[int(self.outdegree)], 0.27, 1020.0, 750.0) 
 
+        if self.indegree in self.celldict.keys():
+            #utils.setup_iclamp_step(self.utils.cells[0], 0.27, 1020.0, 750.0)
+            print 'out degree hub is', self.outdegree
+            self.setup_iclamp_step(self.celldict[int(self.indegree)], 0.27, 1020.0, 750.0)  
+        print self.out_degree, ' out degree'        
+        print self.in_degree, ' in degree '
+        
     def save_matrix(self):    
         SIZE=self.SIZE
         RANK=self.RANK
@@ -68,6 +62,8 @@ class NetStructure():
         with open('inhibitory_matrix.p', 'wb') as handle:
             pickle.dump(self.my_icm, handle)
         print 'connection matrices saved'
+        fig = plt.figure()
+        fig.clf()
 
         import numpy as np
         assert RANK==0
@@ -96,12 +92,15 @@ class NetStructure():
         plt.ylabel('rows = sources')
         plt.title('Ecitatory Adjacency Matrix')
         plt.grid(True)
+    
         sfin = 'Excitatory_Adjacency_Matrix.png'
         fig.savefig(sfin)
 
         fig = plt.figure()
         fig.clf()
+    
         im = plt.imshow(self.my_icm, interpolation='nearest')
+    
         plt.autoscale(True)
         plt.colorbar(im)
         plt.xlabel('columns = targets')
