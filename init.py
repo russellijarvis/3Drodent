@@ -25,7 +25,7 @@ config = Config().load('config.json')
 utils = Utils(config,NCELL=20,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 
-utils.wirecells_test()#wire cells on different hosts.
+utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
 utils.h('forall{ for(x,0){ uninsert xtra}}')    
 from rigp import NetStructure

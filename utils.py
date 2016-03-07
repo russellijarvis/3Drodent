@@ -300,8 +300,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         print comptime, exchtime, splittime, gaptime
 
 
-    def nestedpre_test(self,j):
-        '''Author Russell Jarvis russell_jarvis@riseup.net'''
+    def nestedpre(self,j):
 
         h=self.h   
         pc=h.ParallelContext()
@@ -433,7 +432,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         
        
-    def nestedpost_test(self,data):
+    def nestedpost(self,data):
         """
         Author Russell Jarvis russell_jarvis@riseup.net
         
@@ -530,7 +529,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
 
 
-    def wirecells_test(self):
+    def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
         The function returns two adjacency matrices. One matrix whose elements are excitatory connections and another matrix of inhibitory connections"""
         #from segment_distance import dist3D_segment_to_segment
@@ -565,7 +564,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
                         cell1=pc.gid2cell(i)
-                        coordictlist.append(self.nestedpre_test(i))
+                        coordictlist.append(self.nestedpre(i))
                     print 'end tx on rank ', COMM.rank
 
                 #All CPUs wait here so that recieving only occurs when the rank==s has finished
@@ -574,7 +573,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 print 'checking for rx on rank ', COMM.rank
                 if len(data) != 0:
                     print 'receieved rx on rank ', COMM.rank
-                    self.nestedpost_test(data)
+                    self.nestedpost(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
 
