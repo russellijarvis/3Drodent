@@ -3,8 +3,7 @@
 
 A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
-
-This model needs an installation of NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
+This model needs an installation of NEURON-7.3/NEURON-7.4 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python. The model works on both Ubuntu and OSX.
 
 ##Installation Instructions 
 
@@ -110,7 +109,7 @@ $nrnivmodl
 is sufficient to build the nmodl code before running the model.
 
 ##Running the model
-To facilitate easy running of the model  (in Ubuntu only) I have created the BASH alias:
+To facilitate easy running of the model  (in both OSX and Ubuntu) I have created the BASH alias:
 ```sh
 alias rspp='cd /git/3Drodentm; mpiexec -np 4 xterm -e "ipython -i use_local_files.py"'
 ```
