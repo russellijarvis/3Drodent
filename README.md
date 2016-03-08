@@ -3,8 +3,9 @@
 
 A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
+This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
-This model needs an installation of NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
+Additionally the model depends on having a subdirectory 3Drodent/main populated by neuron morphology files in the format *.swc. These files are readin systematically onto each host using serialised python list in the pickle format. These files were downloaded on-mass from www.neuromorpho.org. All files with the *.p extension are pickled files.
 
 ##Installation Instructions 
 
@@ -102,6 +103,8 @@ Use macports/apt-get to install python27 in addition to the version of Python th
 ```sh
 sudo pip install allensdk glob2 unittest
 ```
+Note: This models dependency on the Allen Brain SDK is very weak and could easily be factored out.
+
 
 Once NEURON+Python+MPI has been successfuly built, the next step is to build the NMODL code. The NMODL code is comprised by files with the extension .mod.
 
