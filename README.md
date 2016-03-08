@@ -5,7 +5,9 @@ A parallel wiring algorithm for parallel distance dependant wiring arbitary deta
 
 This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
-Additionally the model depends on having a subdirectory 3Drodent/main populated by neuron morphology files in the format *.swc. These files are readin systematically onto each host using serialised python list in the pickle format. These files were downloaded on-mass from www.neuromorpho.org. All files with the *.p extension are pickled files.
+Additionally the model depends on having a subdirectory 3Drodent/main populated by neuron morphology files in the format *.swc. These files are read in to the program systematically onto each host using serialised python list in the pickle format. These files were downloaded on mass from www.neuromorpho.org. All files with the *.p extension are pickled files. With some thought a similar list of of swc files could be created and turned into a pickled object.
+
+Note that many of the neurons and ion channels represented in this model are merely place holders. Neuron morphology files, ion types, and synapse types will be subsituted with more refined and accurate third party models/code as such model components become available. At the moment current model is not a valid or repeatable neuroscience model of any particular brain region, its more of a proof of concept of to facilitate that end.
 
 ##Installation Instructions 
 
@@ -105,7 +107,6 @@ sudo pip install allensdk glob2 unittest
 ```
 Note: This models dependency on the Allen Brain SDK is very weak and could easily be factored out.
 
-
 Once NEURON+Python+MPI has been successfuly built, the next step is to build the NMODL code. The NMODL code is comprised by files with the extension .mod.
 
 Currently the main directory contains the *.mod files (TODO move these to a seperate directory). Navigating to the root 3Drodent dir and executing 
@@ -113,7 +114,7 @@ $nrnivmodl
 is sufficient to build the nmodl code before running the model.
 
 ##Running the model
-To facilitate easy running of the model  (in Ubuntu only) I have created the BASH alias:
+To facilitate easy running of the model  (in both OSX and Ubuntu) I have created the BASH alias:
 ```sh
 alias rspp='cd /git/3Drodentm; mpiexec -np 4 xterm -e "ipython -i use_local_files.py"'
 ```
