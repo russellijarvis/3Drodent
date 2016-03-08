@@ -9,6 +9,11 @@ Additionally the model depends on having a subdirectory 3Drodent/main populated 
 
 Note that many of the neurons and ion channels represented in this model are merely place holders. Neuron morphology files, ion types, and synapse types will be subsituted with more refined and accurate third party models/code as such model components become available. At the moment current model is not a valid or repeatable neuroscience model of any particular brain region, its more of a proof of concept of to facilitate that end.
 
+The python methods that are used to achieve MPI aware distance dependent wiring are located in the Utils.py file. The relevant function definitions are:
+def nestedpre(self):
+def nestedpost(self):
+def wirecells(self):
+
 ##Installation Instructions 
 
 Instructions for Ubuntu-Linux are coming, this file should be updated in May 2016 a month after the release of Ubuntu Ubuntu 16.04 LTS Xenial Xerus April 2016. Note the Ubuntu instructions should be very similar to the OSX instructions, except that apt-get is used in place of macports.
