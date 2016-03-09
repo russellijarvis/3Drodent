@@ -1,7 +1,6 @@
 '''
 Author information. This is an extension to the Utils class from Allen Brain API. 
-The parallel wiring related functions are written by Russell Jarvis russell_jarvis@riseup.net
-https://www.linkedin.com/in/russell-jarvis-02433a30?trk=hp-identity-name
+The parallel wiring related functions are written by Russell Jarvis rjjarvis@asu.edu
 '''
 
 
@@ -83,8 +82,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         else:
             length=len(excitatory)
         for i in xrange(0,length):
-            #If change conditions, then must re-run wiring not from file
-            #if ((i%2)==0):
+            #Check to see how often index is divisible by 3.
             if ((i%3)==0): #2/3 excitatory to reflect cortical balance of transmitters.
                 bothtrans.append(interneurons[i]) 
             else:
@@ -111,17 +109,49 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             morphs.append(morphology)
         return morphs,swclist,cells1
 
+
+    
+
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
     #Call a method test_cell inside the make_cells function.
-    #def test_cell(self,type):
-    #    from neuron.unit.neuroelectro import NeuroElectroSummary
-    #    if type=='hippocampus':
-    #        summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
-    #                                    ephysprop={'name':'spike width'})
-    #        observation = summary.get_observation(show=True)
-    #        from neuronunit.tests import import SpikeWidthTest
-    #        ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+    def test_cell(self,type):
+        from neuron.unit.neuroelectro import NeuroElectroSummary
+        if type=='hip_pyr':
+            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
+                                        ephysprop={'name':'spike width'})
+            observation = summary.get_observation(show=True)
+            from neuronunit.tests import import SpikeWidthTest
+            ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+    
+    
+    x = NeuroElectroDataMap() 
+    #TODO find neurolex.org ID for 
+    x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                       # nucleus pyramidal neuron'.
+    x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.  
+    
+    
+    #x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
+    x.get_values() # Gets values for spike width from this paper.  
+    dir(x)
+    width = x.val # Spike width reported in that paper. 
+    
+    #t = neurounit.tests.SpikeWidthTest(spike_width=width)
+    #c = sciunit.Candidate() # Instantiation of your model (or other candidate)
+    #c.execute = code_that_runs_your_model
+    #result = sciunit.run(t,m)
+    #print result.score
+    
+    #OR
+    
+    #x = NeuroElectroSummary() 
+    #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral 
+                                       # nucleus pyramidal neuron'.
+    #x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
+    #x.get_values() # Gets values for spike width from this paper.  
+    #width = x.mean # Mean Spike width reported across all matching papers. 
+    #...
             
             
     def make_cells(self,polarity):
@@ -134,15 +164,16 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-        #self.testcell(type)
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)}         
-        itergids = iter( i for i in range(RANK, NCELL, SIZE) )        
+        itergids = iter( d[i][3] for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
+        #This would require an iterator such as the following.
         #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
-        for i in itergids:
-            cell = h.mkcell(d[i][3])            
+        for j,i in enumerate(itergids):
+            cell = h.mkcell(i) 
+            #cell = h.mkcell(d[i][3])            
             print cell, d[i][3]
             cell.geom_nseg()
             cell.gid1=i #itergids.next()
@@ -151,6 +182,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             if 'pyramid' in d[i]:                
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1
+                self.testcell('hip_pyr')
+
+                self.testcell('cort_pyr')
+        
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            
                 #inhibitory cell.
