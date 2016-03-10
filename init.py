@@ -24,10 +24,9 @@ import pdb
 config = Config().load('config.json')
 utils = Utils(config,NCELL=20,readin=1)
 info_swc=utils.gcs(utils.NCELL)
-
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
-utils.h('forall{ for(x,0){ uninsert xtra}}')    
+utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
     hubs=NetStructure(utils,utils.my_ecm,utils.my_icm,utils.visited,utils.celldict)
@@ -65,6 +64,7 @@ import matplotlib.pyplot as plt
 fig = plt.figure()
 fig.clf()
 
+#TODO outsource management of membrane traces to neo/elephant.
 for gid,v in vec['v'].iteritems():
     print v.to_python()
     plt.plot(vec['t'].to_python(),v.to_python())
@@ -76,22 +76,13 @@ plt.title('traces')
 plt.grid(True)
 
 
-print utils.h.tvec.to_python()
-print utils.h.gidvec.to_python()
+
+if utils.COMM.rank==0:
+    print utils.h.tvec.to_python()
+    print utils.h.gidvec.to_python()
+
+
 #Probably just get the spike distance.
-#Make my project open source.
-#utils.vec_reduce()
-#if utils.RANK==0:
-#    vecs=zip(utils.my_tvec,utils.my_idvec)
-with open(str(utils.COMM.rank)+'vectors.p', 'wb') as handle:
-    pickle.dump(utils.my_tvec, handle)    
-#system.
-chtodir=os.getcwd()+"../../tigramite_1.3"
-os.chdir("/home/russell/tigramite_1.3")
-#if COMM.rank==0:
-#execfile('tigramite_gui.py')
-#utils.prun(10)
-#a=tigramite.Tigramite()
 
 #import http_server as hs
 #hs.load_url('force.json')
@@ -106,23 +97,4 @@ def mkjson(): #Only ascii as in dictionary contents
         write(str(m)+'.json',m.root)
     return 0
 
-
-#morphs,swclist,cells1=read_local_swc()        
-#cells1
-
-
-#bp.cache_data(395310469, working_directory='neuronal_model')
-#for i in information['msg']:    
-#    bp.cache_data(i['id'], working_directory='neuronal_model')
-
-#f1 = open('/home/russell/git/allen/neuron_models_from_query_builder.json')
-#f1= open('neuron_models_from_query_builder.json')
-#information = api.load(f1)
-#return information
-'''
-#def read_local_json():
-#    from allensdk.api import api
-#    api.json_utilities.read('/home/russell/git/allen/neuron_models_from_query_builder.json')
-#read_local_json()
-#pdb.set_trace()
 

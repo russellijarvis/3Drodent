@@ -150,10 +150,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
             #TODO find neurolex.org ID for Vm
  
-            pdb.set_trace()
- 
+            
             x.get_values() # Gets values for spike width from this paper.  
-            dir(x)#get attributes.
             width = x.val # Spike width reported in that paper. 
         if celltype=='neo_basket':
             x.set_neuron(nlex_id='nifext_56')
@@ -162,7 +160,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
     
-    #x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
     
     #t = neurounit.tests.SpikeWidthTest(spike_width=width)
     #c = sciunit.Candidate() # Instantiation of your model (or other candidate)
@@ -183,17 +180,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             
     def make_cells(self,polarity):
         h=self.h    
+        
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
         tvec=h.Vector()
         gidvec=h.Vector()
-        h('objref tvec, gidvec')
-        h('gidvec = new Vector()')
-        h('tvec = new Vector()')
+        #h('objref tvec, gidvec')
+        #h('gidvec = new Vector()')
+        #h('tvec = new Vector()')
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
-        fit_ids = self.description.data['fit_ids'][0] #excitatory         
+        #fit_ids = self.description.data['fit_ids'][0] #excitatory         
         itergids = iter( d[i][3] for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
@@ -201,33 +199,33 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                
         for i,j in enumerate(itergids):
             cell = h.mkcell(j) 
-            #cell = h.mkcell(d[i][3])            
-            print cell, j,i  #, d[i][3]
+            print cell, j,i 
             cell.geom_nseg()
-            cell.gid1=i #itergids.next()
+            cell.gid1=i 
             
-            #excitatory cell.
+            #excitatory neuron.
             if 'pyramid' in d[i]:                
-                #pdb.set_trace()
-                
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
-                cell.polarity=1
-                if 'hippocampus' in d[i]
-                    self.test_cell('hip_pyr')
-                if 'neocortex' in d[i]
-                    self.test_cell('cort_pyr')
+                cell.polarity=1                
+                pass
+                    if 'hippocampus' in d[i]:
+                        self.test_cell('hipp_pyr')
+                    if 'neocortex' in d[i]:
+                        self.test_cell('cort_pyr')
         
-                #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
-            else:            
-                #inhibitory cell.
-                #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
+            #inhibitory neuron.
+            else:                              
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0           
+                pass
+                    if 'basket' in d[i]:
+                        self.test_cell('basket')
+      
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
-            hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            h(hocstring)
+            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
+            #h(hocstring)
             pc.spike_record(i,tvec,gidvec)
             
             cell1=pc.gid2cell(i)
@@ -268,7 +266,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        import numpy as np
+        #import numpy as np
 
         ##Argument matrix
         if matrix!=None:

@@ -1,9 +1,14 @@
-3Drodentm
-=========
+##3Drodentm
 
 A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
-Although it is not always possible to obtain stains including adjacent neurons from the same rodent. Increasingly the quality of imaging technologies and in-silico neuron development algorithms are improving such that detailed and anatomically accurate 3D network reconstructions of rodent brain is increasingly possible.
+#Although it is not always possible to obtain cell stains including adjacent neurons from the same rodent. Increasingly the quality of imaging technologies and in-silico neuron development algorithms are improving such that detailed and anatomically accurate 3D network reconstructions of rodent brain is increasingly possible.
+
+##This program has two use cases:
+In the first case it can take advantage of digital representations of 3D neurons grown using artificial neural development algorithms such as NeuroMAC.
+In the second case it can take advantage of whole network reconstructions obtained with light-sheet microscopy.
+
+The advantages to this wiring algorithm is that all the distance dependant calculations occur the Python-HOC frame work. No additional programs are run, and no configuration files need to be set, and the number of neurons represented and the number of CPUs used to execute code is flexible.
 
 This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
@@ -126,6 +131,8 @@ To facilitate easy running of the model  (in both OSX and Ubuntu) I have created
 alias rspp='cd /git/3Drodentm; mpiexec -np 4 xterm -e "ipython -i use_local_files.py"'
 
 ```
+The argument -np 4 specifies the number of processes to be used, you may add more or less as required.
+
 Adding the alias to my ~/.bashrc file means that I can launch the model simply by executing $rspp at the command line.
 However note that this depends on the program xterm being available. In Ubuntu xterm can readily by installed using apt-get however in OSX xterm depends on XQuartz the X11 server which will need to be installed. [Instructions for installing XQuartz](https://www.neuron.yale.edu/neuron/download/compilestd_osx)
 
