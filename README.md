@@ -2,13 +2,13 @@
 
 A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
-#Although it is not always possible to obtain cell stains including adjacent neurons from the same rodent. Increasingly the quality of imaging technologies and in-silico neuron development algorithms are improving such that detailed and anatomically accurate 3D network reconstructions of rodent brain is increasingly possible.
+The advantages to this wiring algorithm is that all the distance dependant calculations occur the Python-HOC frame work. No additional programs are run, and no configuration files need to be set, and the network size (in number of neurons) and the number of CPUs used to execute code are flexible.
 
 ##This program has two use cases:
-In the first case it can take advantage of digital representations of 3D neurons grown using artificial neural development algorithms such as NeuroMAC.
-In the second case it can take advantage of whole network reconstructions obtained with light-sheet microscopy.
+In the first case it can take advantage of digital representations of 3D neurons grown using artificial growth algorithms such as NeuroMAC and [L-NEURON](http://krasnow1.gmu.edu/cn3/L-Neuron/HTM/paper.htm) 
+In the second case advances in light imaging technology are making neural network reconstruction more likely. The algorithm may take advantage of whole network reconstructions which that may be obtained in the future using light-sheet microscopy.
 
-The advantages to this wiring algorithm is that all the distance dependant calculations occur the Python-HOC frame work. No additional programs are run, and no configuration files need to be set, and the number of neurons represented and the number of CPUs used to execute code is flexible.
+##Requirements.
 
 This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
@@ -17,11 +17,11 @@ Additionally the model depends on having a subdirectory 3Drodent/main populated 
 Note that many of the neurons and ion channels represented in this model are merely place holders. Neuron morphology files, ion types, and synapse types will be subsituted with more refined and accurate third party models/code as such model components become available. At the moment current model is not a valid or repeatable neuroscience model of any particular brain region, its more of a proof of concept of to facilitate that end.
 
 ##License 
-Much of the code in this repository except for utils.py, init.py, and morph.hoc, and rigp.py is based on open source third party code. This project appeals to the license of the GPL third party code which this project is depends on. I will make this more explicit in the future.
+Much of the code in this repository except for utils.py, init.py, and morph.hoc, and rigp.py is based on open source third party code. This project appeals to the license of the third party code which this project depends on. I will make this more explicit in the future.
 
 The python methods that are used to achieve MPI aware distance dependent wiring are located in the Utils.py file. The relevant function definitions are:
-def nestedpre(self):
-def nestedpost(self):
+def pre_synapse(self):
+def post_synapse(self):
 def wirecells(self):
 
 ##Installation Instructions 
