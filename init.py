@@ -89,6 +89,7 @@ def plot_raster(tvec,gidvec):
     j=len(colors)-1
     plt.plot(tvec,gidvec,'.',c=colors[j], markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
+
 print utils.h.tvec.to_python()
 print utils.h.gidvec.to_python()
 plot_raster(utils.h.tvec.to_python(),utils.h.gidvec.to_python())
@@ -110,3 +111,4 @@ def mkjson(): #Only ascii as in dictionary contents
     return 0
 
 
+'''

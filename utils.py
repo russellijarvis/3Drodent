@@ -191,11 +191,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #h('tvec = new Vector()')
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
-        #fit_ids = self.description.data['fit_ids'][0] #excitatory         
         itergids = iter( d[i][3] for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
         #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
+        fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
         for i,j in enumerate(itergids):
             cell = h.mkcell(j) 
@@ -208,18 +208,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1                
                 pass
-                    if 'hippocampus' in d[i]:
-                        self.test_cell('hipp_pyr')
-                    if 'neocortex' in d[i]:
-                        self.test_cell('cort_pyr')
+                if 'hippocampus' in d[i]:
+                    self.test_cell('hipp_pyr')
+                if 'neocortex' in d[i]:
+                    self.test_cell('cort_pyr')
         
             #inhibitory neuron.
             else:                              
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.polarity=0           
                 pass
-                    if 'basket' in d[i]:
-                        self.test_cell('basket')
+                if 'basket' in d[i]:
+                    self.test_cell('basket')
       
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)

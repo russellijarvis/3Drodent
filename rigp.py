@@ -18,8 +18,10 @@ class NetStructure():
         self.my_ecm=my_ecm
         self.my_icm=my_icm
         self.my_visited=my_visited
-        self.indegree=0
-        self.outdegree=0
+        setattr(self,'outdegree',0)
+        setattr(self,'indegree',0)
+        #self.indegree=0
+        #self.outdegree=0
         self.celldict=celldict
         self.old_sum=0    
         self.utils=utils
@@ -35,7 +37,9 @@ class NetStructure():
 
     def hubs(self):
         import numpy as np
-        setattr()
+        #setattr()
+        setattr(self,'outdegree',np.where(self.my_ecm == np.max(self.my_ecm))[0][0])
+
         #
         # Need to apply np shape to np.where, problem is it returns non unique values.
         # np.shape()
