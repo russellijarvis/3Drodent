@@ -18,8 +18,10 @@ fh = logging.FileHandler('wiring.log')
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 logger.addHandler(fh)
-import unittest
+#import unittest
 import pdb as pdb
+import pickle
+#import pickle
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
@@ -29,15 +31,24 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref pc, py')
         h('pc = new ParallelContext()')
         h('py = new PythonObject()')
-        self.readin=readin
+        
+        #TODO update initial attributes using the more pythonic setattr
+        
+        setattr(self, 'readin',readin)
+        #self.readin=readin
         self.synapse_list=[]
         self.stim = None
         self.stim_curr = None
         self.sampling_rate = None
         self.cells = []
         self.gidlist=[]
-        self.NCELL=NCELL
-        self.celldict={}
+        #TODO update initial attributes using the more pythonic setattr
+
+        #self.NCELL=NCELL
+        setattr(self,'NCELL',NCELL)
+        setattr(self,'celldict',{})
+
+        #self.celldict={}
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
@@ -70,7 +81,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         however this is not practical for debugging small models, composed
         of a balance between excitation and inhibition.
         '''
-        import pickle
         allrows = pickle.load(open('allrows.p', 'rb'))
         allrows.remove(allrows[0])#The first list element are the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
@@ -88,7 +98,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             else:
                 bothtrans.append(excitatory[i])
         return bothtrans
-    
+    '''
+    Definition not used, so confuses development DELETE.
     def read_local_swc(self):
         h=self.h    
         NCELL=self.NCELL
@@ -108,34 +119,50 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             morphology.root
             morphs.append(morphology)
         return morphs,swclist,cells1
-
+    '''
 
     
 
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
     #Call a method test_cell inside the make_cells function.
-    def test_cell(self,type):
-        from neuron.unit.neuroelectro import NeuroElectroSummary
-        if type=='hip_pyr':
+    def test_cell(self,celltype='hip_pyr'):
+        from neuronunit.neuroelectro import NeuroElectroSummary
+        
+        if celltype=='hip_pyr':
             summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
                                         ephysprop={'name':'spike width'})
             observation = summary.get_observation(show=True)
-            from neuronunit.tests import import SpikeWidthTest
-            ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
-    
-    
-    x = NeuroElectroDataMap() 
-    #TODO find neurolex.org ID for 
-    x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
-                                       # nucleus pyramidal neuron'.
-    x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.  
-    
+            #from neuronunit.tests import SpikeWidthTest
+            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+            #Does not work due to problem with elephant.
+            #Note elephant requires pre-release version of neo.
+            pass
+
+        if celltype=='neo_pyr':
+            from neuronunit import neuroelectro
+            x = neuroelectro.NeuroElectroDataMap()
+  
+            x.set_neuron(nlex_id='sao2128417084')
+            pass
+            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                           # nucleus pyramidal neuron'.
+            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+            #TODO find neurolex.org ID for Vm
+ 
+            pdb.set_trace()
+ 
+            x.get_values() # Gets values for spike width from this paper.  
+            dir(x)#get attributes.
+            width = x.val # Spike width reported in that paper. 
+        if celltype=='neo_basket':
+            x.set_neuron(nlex_id='nifext_56')
+            pass
+        if celltype=='dg_basket':
+            x.set_neuron(nlex_id='nlx_cell_100201')
+            pass
     
     #x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
-    x.get_values() # Gets values for spike width from this paper.  
-    dir(x)
-    width = x.val # Spike width reported in that paper. 
     
     #t = neurounit.tests.SpikeWidthTest(spike_width=width)
     #c = sciunit.Candidate() # Instantiation of your model (or other candidate)
@@ -165,26 +192,30 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
         pc=h.ParallelContext()
-        d = { x: y for x,y in enumerate(polarity)}         
+        d = { x: y for x,y in enumerate(polarity)} 
+        fit_ids = self.description.data['fit_ids'][0] #excitatory         
         itergids = iter( d[i][3] for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
         #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
-        fit_ids = self.description.data['fit_ids'][0] #excitatory        
-        for j,i in enumerate(itergids):
-            cell = h.mkcell(i) 
+               
+        for i,j in enumerate(itergids):
+            cell = h.mkcell(j) 
             #cell = h.mkcell(d[i][3])            
-            print cell, d[i][3]
+            print cell, j,i  #, d[i][3]
             cell.geom_nseg()
             cell.gid1=i #itergids.next()
             
             #excitatory cell.
             if 'pyramid' in d[i]:                
+                #pdb.set_trace()
+                
                 self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.polarity=1
-                self.testcell('hip_pyr')
-
-                self.testcell('cort_pyr')
+                if 'hippocampus' in d[i]
+                    self.test_cell('hip_pyr')
+                if 'neocortex' in d[i]
+                    self.test_cell('cort_pyr')
         
                 #TODO use neuroelectro here, to unit test each cell and to check if it will fire.
             else:            

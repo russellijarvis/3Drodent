@@ -3,6 +3,8 @@
 
 A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
+Although it is not always possible to obtain stains including adjacent neurons from the same rodent. Increasingly the quality of imaging technologies and in-silico neuron development algorithms are improving such that detailed and anatomically accurate 3D network reconstructions of rodent brain is increasingly possible.
+
 This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
 Additionally the model depends on having a subdirectory 3Drodent/main populated by neuron morphology files in the format *.swc. These files are read in to the program systematically onto each host using serialised python list in the pickle format. These files were downloaded on mass from www.neuromorpho.org. All files with the *.p extension are pickled files. With some thought a similar list of of swc files could be created and turned into a pickled object.
@@ -122,6 +124,12 @@ is sufficient to build the nmodl code before running the model.
 To facilitate easy running of the model  (in both OSX and Ubuntu) I have created the BASH alias:
 ```sh
 alias rspp='cd /git/3Drodentm; mpiexec -np 4 xterm -e "ipython -i use_local_files.py"'
+
 ```
 Adding the alias to my ~/.bashrc file means that I can launch the model simply by executing $rspp at the command line.
 However note that this depends on the program xterm being available. In Ubuntu xterm can readily by installed using apt-get however in OSX xterm depends on XQuartz the X11 server which will need to be installed. [Instructions for installing XQuartz](https://www.neuron.yale.edu/neuron/download/compilestd_osx)
+
+An alias can also be used to kill all invocations of xterm.
+```sh
+alias kx='pgrep xterm | xargs kill'
+```
