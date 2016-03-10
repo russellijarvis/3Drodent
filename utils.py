@@ -184,8 +184,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        tvec=h.Vector()
-        gidvec=h.Vector()
+        self.tvec=h.Vector()
+        self.gidvec=h.Vector()
         #h('objref tvec, gidvec')
         #h('gidvec = new Vector()')
         #h('tvec = new Vector()')
