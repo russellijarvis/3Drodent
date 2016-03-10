@@ -2,12 +2,13 @@
 
 A parallel wiring algorithm for parallel distance dependant wiring arbitary detailed morphologies. The algorithm was made to facilitate the study dynamic network changes corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
+The advantages to this wiring algorithm is that all the distance dependant calculations occur the Python-HOC frame work. No additional programs are run, and no configuration files need to be set, and the network size (in number of neurons) and the number of CPUs used to execute code are flexible.
 
 ##This program has two use cases:
 In the first case it can take advantage of digital representations of 3D neurons grown using artificial growth algorithms such as NeuroMAC and [L-NEURON](http://krasnow1.gmu.edu/cn3/L-Neuron/HTM/paper.htm) 
-In the second case it may take advantage of whole network reconstructions which that may be obtained in the future using light-sheet microscopy.
+In the second case advances in light imaging technology are making neural network reconstruction more likely. The algorithm may take advantage of whole network reconstructions which that may be obtained in the future using light-sheet microscopy.
 
-The advantages to this wiring algorithm is that all the distance dependant calculations occur the Python-HOC frame work. No additional programs are run, and no configuration files need to be set, and the number of neurons represented and the number of CPUs used to execute code is flexible.
+##Requirements.
 
 This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON must be able to call Python.
 
