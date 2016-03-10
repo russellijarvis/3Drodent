@@ -63,13 +63,16 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 fig = plt.figure()
 fig.clf()
-
+plt.hold(True) #seems to be unecessary function call.
 #TODO outsource management of membrane traces to neo/elephant.
+
+#TODO use allreduce to reduce python dictionary to rank0
+
 for gid,v in vec['v'].iteritems():
     print v.to_python()
     plt.plot(vec['t'].to_python(),v.to_python())
 fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
-
+plt.hold(False) #seems to be unecessary function call.
 plt.xlabel('time (ms)')
 plt.ylabel('Voltage (mV)')
 plt.title('traces')
@@ -77,10 +80,19 @@ plt.grid(True)
 
 
 
-if utils.COMM.rank==0:
-    print utils.h.tvec.to_python()
-    print utils.h.gidvec.to_python()
 
+def plot_raster(tvec,gidvec):
+    import matplotlib as plt
+    plt.title("Raster Plot")
+    plt.hold(True)
+    colors=array([[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00],[0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33],[1.00,0.38,0.60]]) # Colors for each cell population
+    j=len(colors)-1
+    plt.plot(tvec,gidvec,'.',c=colors[j], markeredgecolor = 'none')
+    plt.savefig('raster'+str(utils.COMM.rank)+'.png')
+print utils.h.tvec.to_python()
+print utils.h.gidvec.to_python()
+plot_raster(utils.h.tvec.to_python(),utils.h.gidvec.to_python())
+    
 
 #Probably just get the spike distance.
 

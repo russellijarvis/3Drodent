@@ -297,8 +297,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #    assert np.sum(self.my_visited)!=0
         
 
-    def vec_reduce(self):       
-        print type(np.array(self.idvec.to_python()))
+    def vec_reduce(self,tvec,gidvec):      
+        assert type(tvec)==np.array
+        assert type(gidvec)==np.array
+         
+        #print type(np.array(self.idvec.to_python()))
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -364,8 +367,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         print comptime, exchtime, splittime, gaptime
 
 
-    def nestedpre(self,j):
-
+    def pre_synapse(self,j):
+        '''
+        search for viable synaptic vesicle sites.
+        '''
         h=self.h   
         pc=h.ParallelContext()
         shiplist=[]
@@ -494,11 +499,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         
        
-    def nestedpost(self,data):
+    def post_synapse(self,data):
         """
+        search viable post synaptic receptor sites.
         
         This is the inner most loop of the parallel wiring algorithm.
-        13For ever GID
+        For every GID
         For every coordinate thats received from a broadcast.
         for i,t in self.celldict.iteritems():
         For ever GID thats on this host (in the dictionary)
@@ -532,10 +538,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('pc = new ParallelContext()')        
         h('objref coords2') 
         h('coords2 = new Vector(3)')
-        #self.debugdata=data
         for q,s in enumerate(data):
             
             def test_wiring(q,s,data):
+                '''
+                A test of to see if variables are updating properly.
+                '''
                 if q<len(data)-1:
                     left=(str(s[q]['secnames'])+str(s[q]['seg']))
                     right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
@@ -625,7 +633,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
                         cell1=pc.gid2cell(i)
-                        coordictlist.append(self.nestedpre(i))
+                        coordictlist.append(self.pre_synapse(i))
                     print 'end tx on rank ', COMM.rank
 
                 #All CPUs wait here so that recieving only occurs when the rank==s has finished
@@ -634,7 +642,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 print 'checking for rx on rank ', COMM.rank
                 if len(data) != 0:
                     print 'receieved rx on rank ', COMM.rank
-                    self.nestedpost(data)
+                    self.post_synapse(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
 

@@ -25,6 +25,8 @@ class NetStructure():
         self.utils=utils
         self.h=self.utils.h
 
+
+
     def setup_iclamp_step(self, target_cell, amp, delay, dur):
         self.stim = self.h.IClamp(target_cell.soma[0](0.5))
         self.stim.amp = amp
@@ -33,19 +35,23 @@ class NetStructure():
 
     def hubs(self):
         import numpy as np
+        setattr()
+        #
+        # Need to apply np shape to np.where, problem is it returns non unique values.
+        # np.shape()
+        
         self.out_degree = np.where(self.my_ecm == np.max(self.my_ecm))[0][0]
         self.in_degree = np.where(self.my_ecm.transpose() == np.max(self.my_ecm))[0][0]
         if self.outdegree in self.celldict.keys():
-            #utils.setup_iclamp_step(self.utils.cells[0], 0.27, 1020.0, 750.0)
-            #print 'out degree hub is', self.outdegree
             self.setup_iclamp_step(self.celldict[int(self.outdegree)], 0.27, 1020.0, 750.0) 
 
         if self.indegree in self.celldict.keys():
-            #utils.setup_iclamp_step(self.utils.cells[0], 0.27, 1020.0, 750.0)
-            #print 'out degree hub is', self.outdegree
             self.setup_iclamp_step(self.celldict[int(self.indegree)], 0.27, 1020.0, 750.0)  
         print self.out_degree, ' out degree'        
         print self.in_degree, ' in degree '
+
+
+
         
     def save_matrix(self):    
         SIZE=self.SIZE
