@@ -90,9 +90,9 @@ def plot_raster(tvec,gidvec):
     plt.plot(tvec,gidvec,'.',c=colors[j], markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
 
-print utils.h.tvec.to_python()
-print utils.h.gidvec.to_python()
-plot_raster(utils.h.tvec.to_python(),utils.h.gidvec.to_python())
+print type(utils.tvec.to_python())
+print type(utils.gidvec.to_python())
+plot_raster(utils.tvec.to_python(),utils.gidvec.to_python())
     
 
 #Probably just get the spike distance.
