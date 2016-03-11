@@ -144,3 +144,12 @@ An alias can also be used to kill all invocations of xterm.
 ```sh
 alias kx='pgrep xterm | xargs kill'
 ```
+Other command line shortcuts that are sometimes useful for viewing results include:
+```sh
+on Ubuntu:
+$eog  membrane_traces*.png
+
+on OSX:
+$open preview  membrane_traces*.png
+
+```
