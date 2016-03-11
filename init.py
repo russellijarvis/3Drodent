@@ -33,19 +33,44 @@ if utils.COMM.rank==0:
     print 'experimental rig'
     utils.plotgraph()
     hubs.save_matrix()
-    hubs.hubs()
+    hubs.hubs()    
+    hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
+    '''
+    #my_ecm, my_icm based.
     print '\n', 'the following is global hub calculations'
-    print '\n', utils.COMM.rank, hubs.outdegree, " outdegree", hubs.indegree, " indegree"
+    print '\n', ' CPU rank: ', utils.COMM.rank, ' outdegree ', hubs.outdegree,  ' indegree ', hubs.indegree,
     print '\n', 'the above is global hub calculations'
+    hubout=0
+    hubin=0
+    hubout=hubs.get_out(utils.my_ecm)
+    hubin=hubs.get_in(utils.my_ecm)
+    assert hubout==hubs.outdegree
+    assert hubin==hubs.indegree
+    print '\n', 'hub out', hubout, 'hub in', hubin,
+    '''
+
     
 #Does the insertion of an IClamp work 
+# ecm, icm based.
+#
+'''
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.hubs()
-print '\n', 'the following is local CPU specific hub calculations'
-print '\n', utils.COMM.rank, hubs.outdegree, " outdegree", hubs.indegree, " indegree"
+print '\n', 'the following is local CPU specific hub calculations using the different method'
+print '\n', ' CPU rank: ', utils.COMM.rank, ' outdegree ', hubs.outdegree,  ' indegree ', hubs.indegree,
+hubout=0
+hubin=0
+hubout=hubs.get_out(utils.ecm)
+hubin=hubs.get_in(utils.ecm)
+assert hubout==hubs.outdegree
+assert hubin==hubs.indegree
+assert hubin==hubs.indegree
+print '\n', 'hub out', hubout, 'hub in', hubin,
+'''
+
 #In addition to stimulating the out degree hub, stimulate the first cell on each host,
 #To make activity more likely.
-utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
+#utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
 # configure recording
 utils.spikerecord()
 vec = utils.record_values()
@@ -65,9 +90,8 @@ fig = plt.figure()
 fig.clf()
 plt.hold(True) #seems to be unecessary function call.
 #TODO outsource management of membrane traces to neo/elephant.
-
 #TODO use allreduce to reduce python dictionary to rank0
-
+#This is different to Allreduce.
 for gid,v in vec['v'].iteritems():
     print v.to_python()
     plt.plot(vec['t'].to_python(),v.to_python())
@@ -78,20 +102,17 @@ plt.ylabel('Voltage (mV)')
 plt.title('traces')
 plt.grid(True)
 
-
-
-
+print type(utils.tvec.to_python())
+print type(utils.gidvec.to_python())
 def plot_raster(tvec,gidvec):
+    colors=np.array([[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00],[0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33],[1.00,0.38,0.60]]) # Colors for each cell population
     import matplotlib as plt
     plt.title("Raster Plot")
     plt.hold(True)
-    colors=array([[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00],[0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33],[1.00,0.38,0.60]]) # Colors for each cell population
     j=len(colors)-1
     plt.plot(tvec,gidvec,'.',c=colors[j], markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
 
-print type(utils.tvec.to_python())
-print type(utils.gidvec.to_python())
 plot_raster(utils.tvec.to_python(),utils.gidvec.to_python())
     
 

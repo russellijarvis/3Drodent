@@ -226,7 +226,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             h('pc.cell('+str(i)+', nc)')
             #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
             #h(hocstring)
-            pc.spike_record(i,tvec,gidvec)
+            pc.spike_record(i,self.tvec,self.gidvec)
             
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell

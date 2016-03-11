@@ -4,18 +4,20 @@
 import unittest
 import networkx
 from mpi4py import MPI
-
+import numpy as np
+        
 
 
 #how to pass attributes from one object into this cls type object?
 
 class NetStructure():
     def __init__(self,utils,my_ecm,my_icm,my_visited,celldict):
-       #assert rank=0
+        #assert rank=0
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
-        self.my_ecm=my_ecm
+        setattr(self,'my_ecm',my_ecm)        
+        #self.my_ecm=my_ecm
         self.my_icm=my_icm
         self.my_visited=my_visited
         setattr(self,'outdegree',0)
@@ -34,28 +36,51 @@ class NetStructure():
         self.stim.amp = amp
         self.stim.delay = delay
         self.stim.dur = dur
+        
+        
+        
+    def get_in(self,ma):
+        '''
+        If there are two equal structural in-degree hubs this method only finds the first one.
+        '''
+        assert type(ma)==np.ndarray
+        old_row = 0
+        row_index = 0
+        for j in xrange(0, int(ma.shape[0])):
+            if sum(ma[j, :]) > old_row:  
+                old_row = sum(ma[j, :])
+                row_index = j
+        return row_index
+
+    def get_out(self,ma):
+        assert type(ma)==np.ndarray
+        old_column = 0
+        column_index = 0
+        for i in xrange(0, int(ma.shape[1])):
+            if sum(ma[:, i]) > old_column:  
+                old_column = sum(ma[:, i])
+                column_index = i
+        return column_index
 
     def hubs(self):
-        import numpy as np
-        #setattr()
-        setattr(self,'outdegree',np.where(self.my_ecm == np.max(self.my_ecm))[0][0])
-
-        #
-        # Need to apply np shape to np.where, problem is it returns non unique values.
-        # np.shape()
-        
-        self.out_degree = np.where(self.my_ecm == np.max(self.my_ecm))[0][0]
-        self.in_degree = np.where(self.my_ecm.transpose() == np.max(self.my_ecm))[0][0]
-        if self.outdegree in self.celldict.keys():
-            self.setup_iclamp_step(self.celldict[int(self.outdegree)], 0.27, 1020.0, 750.0) 
-
-        if self.indegree in self.celldict.keys():
-            self.setup_iclamp_step(self.celldict[int(self.indegree)], 0.27, 1020.0, 750.0)  
-        print self.out_degree, ' out degree'        
-        print self.in_degree, ' in degree '
+        '''
+        If there are two equal structural out-degree hubs this method only finds the first one.
+        '''
+        my_ecm=np.ndarray
+        my_ecm=getattr(self,'my_ecm')
+        colsums=np.array([np.sum(i) for i in np.column_stack(my_ecm)])
+        rowsums=np.array([np.sum(i) for i in np.row_stack(my_ecm)])
+        #out_degree = np.where(colsums == np.max(colsums))[0][0]
+        #in_degree = np.where(colsums == np.max(colsums))[0][0]
+        setattr(self,'outdegree',np.where(colsums == np.max(colsums))[0][0])
+        setattr(self,'indegree',np.where(rowsums == np.max(rowsums))[0][0])
 
 
-
+    def insert_cclamp(self,outdegree,indegree):
+        if outdegree in self.celldict.keys():
+            self.setup_iclamp_step(self.celldict[int(outdegree)], 0.27, 1020.0, 750.0) 
+        if indegree in self.celldict.keys():
+            self.setup_iclamp_step(self.celldict[int(indegree)], 0.27, 1020.0, 750.0)  
         
     def save_matrix(self):    
         SIZE=self.SIZE
