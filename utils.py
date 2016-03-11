@@ -18,10 +18,8 @@ fh = logging.FileHandler('wiring.log')
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 logger.addHandler(fh)
-#import unittest
 import pdb as pdb
 import pickle
-#import pickle
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
@@ -294,8 +292,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     
     def graph_reduce(self):
         my_ecg = utils.COMM.allreduce(ecg, op=dreduce)    
+        my_icg = utils.COMM.allreduce(icg, op=dreduce)    
+
         if utils.COMM.rank==0:
             assert np.sum(my_ecg)!=0
+            assert np.sum(my_icg)!=0
             
     def vec_reduce(self,tvec,gidvec):      
         assert type(tvec)==np.array
@@ -543,7 +544,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 '''
                 A test of to see if variables are updating properly.
                 '''
-                if q<len(data)-1:
+                if q+1<len(data)-1:
                     left=(str(s[q]['secnames'])+str(s[q]['seg']))
                     right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
                     assert left!=right
@@ -627,7 +628,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 #overwritting a coordictlist before it has been properly exhausted.
                 COMM.barrier() #New line could save CPU but functional? Can be removed
                 coordictlist=[]
-                if COMM.rank==s: #New line could save CPU but functional? Can be removed
+                if COMM.rank==s:
                     print 'begin creating message for transmision on rank ', COMM.rank
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
@@ -635,8 +636,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         coordictlist.append(self.pre_synapse(i))
                     print 'end tx on rank ', COMM.rank
 
-                #All CPUs wait here so that recieving only occurs when the rank==s has finished
-                #tranmsitting              
                 data = COMM.bcast(coordictlist, root=s)  # ie root = rank
                 print 'checking for rx on rank ', COMM.rank
                 if len(data) != 0:
@@ -690,21 +689,16 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
         return lsoftup
       
-    def plotgraph(self):
+    def dumpjsongraph(self):
         assert self.COMM.rank==0        
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        #import http_server  
-        #G=nx.from_numpy_matrix(self.my_ecm)
         G=self.my_ecg
         d = json_graph.node_link_data(G)     
-        #t = json_graph.tree_graph(G)       
         json.dump(d, open('js/excitatory_network.json','w'))
         G=self.my_icg
-        #G=nx.from_numpy_matrix(self.my_icm)
         d = json_graph.node_link_data(G)     
-        #t = json_graph.tree_graph(G)       
         json.dump(d, open('js/inhibitory_network.json','w'))
 
         print('Wrote node-link JSON data to js/network.json')
