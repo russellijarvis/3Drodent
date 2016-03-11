@@ -35,48 +35,10 @@ if utils.COMM.rank==0:
     hubs.save_matrix()
     hubs.hubs()    
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
-    '''
-    #my_ecm, my_icm based.
-    print '\n', 'the following is global hub calculations'
-    print '\n', ' CPU rank: ', utils.COMM.rank, ' outdegree ', hubs.outdegree,  ' indegree ', hubs.indegree,
-    print '\n', 'the above is global hub calculations'
-    hubout=0
-    hubin=0
-    hubout=hubs.get_out(utils.my_ecm)
-    hubin=hubs.get_in(utils.my_ecm)
-    assert hubout==hubs.outdegree
-    assert hubin==hubs.indegree
-    print '\n', 'hub out', hubout, 'hub in', hubin,
-    '''
 
-    
-#Does the insertion of an IClamp work 
-# ecm, icm based.
-#
-'''
-hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
-hubs.hubs()
-print '\n', 'the following is local CPU specific hub calculations using the different method'
-print '\n', ' CPU rank: ', utils.COMM.rank, ' outdegree ', hubs.outdegree,  ' indegree ', hubs.indegree,
-hubout=0
-hubin=0
-hubout=hubs.get_out(utils.ecm)
-hubin=hubs.get_in(utils.ecm)
-assert hubout==hubs.outdegree
-assert hubin==hubs.indegree
-assert hubin==hubs.indegree
-print '\n', 'hub out', hubout, 'hub in', hubin,
-'''
 
-#In addition to stimulating the out degree hub, stimulate the first cell on each host,
-#To make activity more likely.
-#utils.setup_iclamp_step(utils.cells[0], 0.27, 1020.0, 750.0)
-# configure recording
 utils.spikerecord()
 vec = utils.record_values()
-
-
-     
 print 'setup recording'
 tstop = 1150
 utils.COMM.barrier()

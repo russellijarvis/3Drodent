@@ -70,8 +70,6 @@ class NetStructure():
         my_ecm=getattr(self,'my_ecm')
         colsums=np.array([np.sum(i) for i in np.column_stack(my_ecm)])
         rowsums=np.array([np.sum(i) for i in np.row_stack(my_ecm)])
-        #out_degree = np.where(colsums == np.max(colsums))[0][0]
-        #in_degree = np.where(colsums == np.max(colsums))[0][0]
         setattr(self,'outdegree',np.where(colsums == np.max(colsums))[0][0])
         setattr(self,'indegree',np.where(rowsums == np.max(rowsums))[0][0])
 

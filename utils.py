@@ -232,6 +232,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             self.celldict[i]=cell
             self.cells.append(cell)
     
+    
+
+    
     def gcs(self,NCELL):
         """Instantiate NEURON cell Objects in the Python variable space, such that cell
         that all cells have unique identifiers."""
@@ -296,7 +299,23 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #if RANK==0:
         #    assert np.sum(self.my_visited)!=0
         
-
+        
+    def dreduce(counter1, counter2, datatype):
+    #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
+        for item in counter2:
+            if item in counter1:
+                counter1[item] += counter2[item]
+            else:
+                counter1[item] = counter2[item]
+        return counter1
+    
+    dreduce = MPI.Op.Create(dreduce, commute=True)
+    
+    def graph_reduce
+        my_ecg = utils.COMM.allreduce(ecg, op=dreduce)    
+    if utils.COMM.rank==0:
+        assert np.sum(my_ecg)!=0
+        
     def vec_reduce(self,tvec,gidvec):      
         assert type(tvec)==np.array
         assert type(gidvec)==np.array
