@@ -311,11 +311,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     
     dreduce = MPI.Op.Create(dreduce, commute=True)
     
-    def graph_reduce
+    def graph_reduce(self):
         my_ecg = utils.COMM.allreduce(ecg, op=dreduce)    
-    if utils.COMM.rank==0:
-        assert np.sum(my_ecg)!=0
-        
+        if utils.COMM.rank==0:
+            assert np.sum(my_ecg)!=0
+            
     def vec_reduce(self,tvec,gidvec):      
         assert type(tvec)==np.array
         assert type(gidvec)==np.array

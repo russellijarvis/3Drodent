@@ -38,12 +38,9 @@ class NetStructure():
         self.stim.dur = dur
         
         
-        
+    '''    Antiquated.
     def get_in(self,ma):
-        '''
-        If there are two equal structural in-degree hubs this method only finds the first one.
-        '''
-        assert type(ma)==np.ndarray
+         assert type(ma)==np.ndarray
         old_row = 0
         row_index = 0
         for j in xrange(0, int(ma.shape[0])):
@@ -61,7 +58,7 @@ class NetStructure():
                 old_column = sum(ma[:, i])
                 column_index = i
         return column_index
-
+    '''
     def hubs(self):
         '''
         If there are two equal structural out-degree hubs this method only finds the first one.
