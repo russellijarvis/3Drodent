@@ -32,7 +32,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('pc = new ParallelContext()')
         h('py = new PythonObject()')
         
-        #TODO update initial attributes using the more pythonic setattr
         
         setattr(self, 'readin',readin)
         #self.readin=readin
@@ -120,9 +119,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             morphs.append(morphology)
         return morphs,swclist,cells1
     '''
-
-    
-
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
     #Call a method test_cell inside the make_cells function.
@@ -160,23 +156,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
     
-    
-    #t = neurounit.tests.SpikeWidthTest(spike_width=width)
-    #c = sciunit.Candidate() # Instantiation of your model (or other candidate)
-    #c.execute = code_that_runs_your_model
-    #result = sciunit.run(t,m)
-    #print result.score
-    
-    #OR
-    
-    #x = NeuroElectroSummary() 
-    #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral 
-                                       # nucleus pyramidal neuron'.
-    #x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
-    #x.get_values() # Gets values for spike width from this paper.  
-    #width = x.mean # Mean Spike width reported across all matching papers. 
-    #...
-            
             
     def make_cells(self,polarity):
         h=self.h    
@@ -205,7 +184,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             
             #excitatory neuron.
             if 'pyramid' in d[i]:                
-                self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
+                #self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
+                cell.pyr()
                 cell.polarity=1                
                 pass
                 if 'hippocampus' in d[i]:
@@ -215,7 +195,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
             #inhibitory neuron.
             else:                              
-                self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
+                #self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
+                cell.basket()
                 cell.polarity=0           
                 pass
                 if 'basket' in d[i]:
@@ -481,12 +462,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 self.icg.add_edge(i,gidn,weight=r/0.4)
                 self.icg[i][gidn]['post_loc']=secnames
                 self.icg[i][gidn]['pre_loc']=k['secnames']
-
                 assert np.sum(self.icm)!=0
         
             else:
                 if (k['gid']%2==0):
-                    post_syn = secnames + ' ' + 'syn_ = new ExpSid(' + str(seg.x) + ')'                       
+                    post_syn = secnames + ' ' + 'syn_ = new AmpaNmda(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
                     self.ecg[i][gidn]['post_loc']=secnames

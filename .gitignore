@@ -201,14 +201,12 @@ analysis2.hoc
 analysisp2.pyc
 analysisp3.pyc
 analysisp4.pyc
-aux_fun.inc
 axon.txt
 backup.hoc
 badindexfile
 badindexfile.sh
 basalforebrainregion.txt
 basalganglia_region.txt
-bg_cvode.inc
 bigfile.guff
 bigobjects.txt
 biophyseverything.hoc
@@ -346,7 +344,6 @@ memb8.hoc
 memb9.hoc
 memb_errs.txt
 memberrs.txt
-misc.h
 missfont.log
 model_info.md
 moderror.txt
