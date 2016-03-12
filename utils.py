@@ -23,7 +23,7 @@ import pickle
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
-    def __init__(self, description, NCELL=20,readin=0):
+    def __init__(self, description, NCELL=40,readin=0):
         super(Utils, self).__init__(description)
         h=self.h  
         h('objref pc, py')
@@ -161,11 +161,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        self.tvec=h.Vector()
-        self.gidvec=h.Vector()
-        #h('objref tvec, gidvec')
-        #h('gidvec = new Vector()')
-        #h('tvec = new Vector()')
+        #self.tvec=h.Vector()
+        #self.gidvec=h.Vector()
+        h('objref tvec, gidvec')
+        h('gidvec = new Vector()')
+        h('tvec = new Vector()')
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
         itergids = iter( d[i][3] for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
@@ -203,9 +203,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
-            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            #h(hocstring)
-            pc.spike_record(i,self.tvec,self.gidvec)
+            hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
+            h(hocstring)
+            #pc.spike_record(i,self.tvec,self.gidvec)
             
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell
@@ -278,8 +278,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #if RANK==0:
         #    assert np.sum(self.my_visited)!=0
         
-        
-    def dreduce(counter1, counter2, datatype):
+    '''    
+    def dreduce(self,counter1, counter2, datatype):
     #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
         for item in counter2:
             if item in counter1:
@@ -291,13 +291,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     dreduce = MPI.Op.Create(dreduce, commute=True)
     
     def graph_reduce(self):
-        my_ecg = utils.COMM.allreduce(ecg, op=dreduce)    
-        my_icg = utils.COMM.allreduce(icg, op=dreduce)    
+        self.my_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
+        self.my_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
 
         if utils.COMM.rank==0:
-            assert np.sum(my_ecg)!=0
-            assert np.sum(my_icg)!=0
-            
+            assert np.sum(self.my_ecg)!=0
+            assert np.sum(self.my_icg)!=0
+    '''        
     def vec_reduce(self,tvec,gidvec):      
         assert type(tvec)==np.array
         assert type(gidvec)==np.array
@@ -326,7 +326,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         checkpoint_interval = 50000.
 
-        #The following code is from the open source code at:
+        #The following definition body is from the open source code at:
         #http://senselab.med.yale.edu/ModelDB/ShowModel.asp?model=151681
         #with some minor modifications
         cvode = h.CVode()
@@ -515,7 +515,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pre GID != post GID
         If the putative post synaptic gid exists on this CPU, the referen
         tree.
-        My wiring algorithm uses HOC variables that interpolate the middl
+        This wiring algorithm uses HOC variables that interpolate the middl
         some C libraries to achieve collision detection for synapse alloc
         from neuromac.segment_distance import dist3D_segment_to_segment
         from segment_distance import dist3D_segment_to_segment
@@ -544,9 +544,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 '''
                 A test of to see if variables are updating properly.
                 '''
-                if q+1<len(data)-1:
+                if q+1<=len(s):
+                    print len(s),' ',q,' ',q+1
+                    print type(s), type(s[q])
+                    assert q+1<len(data)-1
                     left=(str(s[q]['secnames'])+str(s[q]['seg']))
                     right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
+                    print left, right 
                     assert left!=right
                          
             test_wiring(q,s,data)
