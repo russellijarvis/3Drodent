@@ -41,7 +41,7 @@ if utils.COMM.rank==0:
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
 hubs.insert_cclamp(0,1)
-#utils.graph_reduce()
+utils.graph_reduce()
 utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'

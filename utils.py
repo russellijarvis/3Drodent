@@ -20,6 +20,8 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 import pdb as pdb
 import pickle
+import json
+import os
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
@@ -44,7 +46,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #self.NCELL=NCELL
         setattr(self,'NCELL',NCELL)
         setattr(self,'celldict',{})
-
+        setattr(self,'name_list',[])
         #self.celldict={}
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
@@ -157,7 +159,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             
     def make_cells(self,polarity):
         h=self.h    
-        
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
@@ -168,18 +169,19 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('tvec = new Vector()')
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
-        itergids = iter( d[i][3] for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
+        itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
         #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
-        for i,j in enumerate(itergids):
-            cell = h.mkcell(j) 
+        for (j,i) in itergids:
+            cell = h.mkcell(j)
+            self.names_list[i]=j
             print cell, j,i 
             cell.geom_nseg()
             cell.gid1=i 
-            
+            cell.name=j
             #excitatory neuron.
             if 'pyramid' in d[i]:                
                 #self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
@@ -228,7 +230,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         self.cells_data = self.description.data['biophys'][0]['cells']
         bothtrans =self.prep_list()    
-        import os
+        self.names_list=[0 for x in xrange(0,len(self.bothtrans))]
         os.chdir(os.getcwd() + '/main')  
         self.make_cells(bothtrans)
         len(h.List('NetCon'))                        
@@ -547,13 +549,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 if q+1<=len(s):
                     print len(s),' ',q,' ',q+1
                     print type(s), type(s[q])
-                    assert q+1<len(data)-1
                     left=(str(s[q]['secnames'])+str(s[q]['seg']))
                     right=(str(s[q+1]['secnames'])+str(s[q+1]['seg']))
                     print left, right 
                     assert left!=right
                          
-            test_wiring(q,s,data)
+            #test_wiring(q,s,data)
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
                 k=t #such that it is not prevented from updating
@@ -698,11 +699,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        G=self.my_ecg
-        d = json_graph.node_link_data(G)     
+        d = json_graph.node_link_data(self.my_ecg)     
         json.dump(d, open('js/excitatory_network.json','w'))
-        G=self.my_icg
-        d = json_graph.node_link_data(G)     
+        d = json_graph.node_link_data(self.my_icg)     
         json.dump(d, open('js/inhibitory_network.json','w'))
 
         print('Wrote node-link JSON data to js/network.json')
