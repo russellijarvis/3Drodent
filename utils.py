@@ -230,7 +230,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         self.cells_data = self.description.data['biophys'][0]['cells']
         bothtrans =self.prep_list()    
-        self.names_list=[0 for x in xrange(0,len(self.bothtrans))]
+        self.names_list=[0 for x in xrange(0,len(bothtrans))]
         os.chdir(os.getcwd() + '/main')  
         self.make_cells(bothtrans)
         len(h.List('NetCon'))                        
