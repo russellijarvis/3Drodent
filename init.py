@@ -45,7 +45,7 @@ hubs.insert_cclamp(0,1)
 #utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
-tstop = 1150
+tstop = 2150
 utils.COMM.barrier()
 utils.prun(tstop)
 import matplotlib 
