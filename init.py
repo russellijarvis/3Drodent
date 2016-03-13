@@ -23,7 +23,7 @@ from utils import Utils
 import numpy as np
 import pdb
 config = Config().load('config.json')
-utils = Utils(config,NCELL=40,readin=0)
+utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
@@ -41,8 +41,8 @@ if utils.COMM.rank==0:
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
 hubs.insert_cclamp(0,1)
-utils.graph_reduce()
-utils.spikerecord()
+#utils.graph_reduce()
+#utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
 tstop = 1150
@@ -67,19 +67,24 @@ plt.ylabel('Voltage (mV)')
 plt.title('traces')
 plt.grid(True)
 
-print type(utils.tvec.to_python())
-print type(utils.gidvec.to_python())
+tvec=utils.h.tvec.to_python()
+gidvec=utils.h.gidvec.to_python()
+print type(tvec)
+print type(gidvec)
 def plot_raster(tvec,gidvec):
+    pallete=[[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00], 
+                [0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33]])
+
     fig = plt.figure()
     fig.clf()
-    colors=np.array([[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00],[0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33],[1.00,0.38,0.60]]) # Colors for each cell population
+    color=[1.00,0.38,0.60] # Choose differe Colors for each cell population
     plt.title("Raster Plot")
     plt.hold(True)
-    j=len(colors)-1
-    plt.plot(tvec,gidvec,'.',c=colors[j], markeredgecolor = 'none')
+    j=len(colors)
+    plt.plot(tvec,gidvec,'.',c=color, markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
 
-plot_raster(utils.tvec.to_python(),utils.gidvec.to_python())
+plot_raster(tvec,gidvec)
     
 
 #Probably just get the spike distance.

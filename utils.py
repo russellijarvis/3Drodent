@@ -57,8 +57,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.cellmorphdict={}
         self.nclist = []
         self.seclists=[]
-        self.tvec=self.h.Vector()    
-        self.idvec=self.h.Vector() 
+        #self.tvec=self.h.Vector()    
+        #self.idvec=self.h.Vector() 
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
         self.visited = np.zeros((self.NCELL, self.NCELL))
@@ -122,10 +122,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
     #Call a method test_cell inside the make_cells function.
-    def test_cell(self,celltype='hip_pyr'):
+    def test_cell(self,d):#celltype='hip_pyr'):
         from neuronunit.neuroelectro import NeuroElectroSummary
-        
-        if celltype=='hip_pyr':
+        from neuronunit import neuroelectro
+        x = neuroelectro.NeuroElectroDataMap()
+        if 'hippocampus' in d:
             summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
                                         ephysprop={'name':'spike width'})
             observation = summary.get_observation(show=True)
@@ -134,36 +135,32 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #Does not work due to problem with elephant.
             #Note elephant requires pre-release version of neo.
             pass
-
-        if celltype=='neo_pyr':
-            from neuronunit import neuroelectro
-            x = neuroelectro.NeuroElectroDataMap()
+        if 'neocortex' in d:
   
             x.set_neuron(nlex_id='sao2128417084')
-            pass
+            #pass
             #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
                                            # nucleus pyramidal neuron'.
             x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
             #TODO find neurolex.org ID for Vm
  
-            
-            x.get_values() # Gets values for spike width from this paper.  
-            width = x.val # Spike width reported in that paper. 
-        if celltype=='neo_basket':
+            pass
+            #x.get_values() # Gets values for spike width from this paper. 
+            #pdb.set_trace() 
+            #width = x.val # Spike width reported in that paper. 
+        if 'basket' in d:
             x.set_neuron(nlex_id='nifext_56')
             pass
-        if celltype=='dg_basket':
+        if 'dg_basket' in d:
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
-    
-            
+        
+                
     def make_cells(self,polarity):
         h=self.h    
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
-        #self.tvec=h.Vector()
-        #self.gidvec=h.Vector()
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
@@ -183,24 +180,16 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             cell.gid1=i 
             cell.name=j
             #excitatory neuron.
+            self.test_cell(d[i])
             if 'pyramid' in d[i]:                
                 #self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.pyr()
-                cell.polarity=1                
-                pass
-                if 'hippocampus' in d[i]:
-                    self.test_cell('hipp_pyr')
-                if 'neocortex' in d[i]:
-                    self.test_cell('cort_pyr')
-        
+                cell.polarity=1                        
             #inhibitory neuron.
             else:                              
                 #self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.basket()
                 cell.polarity=0           
-                pass
-                if 'basket' in d[i]:
-                    self.test_cell('basket')
       
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
@@ -233,7 +222,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
         os.chdir(os.getcwd() + '/main')  
         self.make_cells(bothtrans)
-        len(h.List('NetCon'))                        
+        assert len(h.List('NetCon')) != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
         pol=[ a.polarity for a in self.cells ]       
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
@@ -300,6 +289,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             assert np.sum(self.my_ecg)!=0
             assert np.sum(self.my_icg)!=0
     '''        
+    '''
     def vec_reduce(self,tvec,gidvec):      
         assert type(tvec)==np.array
         assert type(gidvec)==np.array
@@ -310,14 +300,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM = self.COMM
         RANK=self.RANK
         COMM.Barrier()
-        self.my_tvec = np.zeros_like(self.idvec.to_python())
+        self.my_tvec = np.zeros_like(self.gidvec.to_python())
         COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
         self.my_idvec = np.zeros_like(self.tvec.to_python())
         COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0
         )
-
+    '''
 
     def prun(self,tstop):
         h=self.h    
@@ -560,6 +550,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 k=t #such that it is not prevented from updating
                 itercell= ( (i,t) for i,t in self.celldict.iteritems() if i in self.celldict.keys() if int(t.gid1) != int(k['gid']) )       
                 for i,t in itercell :                          
+                    # TODO save time by checking if the somas of the two cells are reasonably close before checking every sec,seg in every neuron.
+                    #
+                    # t.soma[0].
                     iterseg=iter( (seg,sec) for sec in t.spk_rx_ls for seg in sec)               
                     for (seg,sec) in iterseg:
                         segxold=seg.x
@@ -638,6 +631,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
                         cell1=pc.gid2cell(i)
+                        #cell1.soma
                         coordictlist.append(self.pre_synapse(i))
                     print 'end tx on rank ', COMM.rank
 
@@ -700,9 +694,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         import networkx as nx
         from networkx.readwrite import json_graph
         d = json_graph.node_link_data(self.my_ecg)     
-        json.dump(d, open('js/excitatory_network.json','w'))
+        json.dump(d, open('web/js/excitatory_network.json','w'))
         d = json_graph.node_link_data(self.my_icg)     
-        json.dump(d, open('js/inhibitory_network.json','w'))
+        json.dump(d, open('web/js/inhibitory_network.json','w'))
 
         print('Wrote node-link JSON data to js/network.json')
         # open URL in running web browser
@@ -789,8 +783,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return vec
   
     def spikerecord(self):   
+        '''
+        This method duplicates other code. I intend to keep it as a method, and delete the duplicate lines.
+        '''
+        h('objref tvec, gidvec')
+        h('gidvec = new Vector()')
+        h('tvec = new Vector()')
+
         for cell in self.cells:
-            self.h.pc.spike_record(int(cell.gid1), self.tvec, self.idvec)
+            self.h.pc.spike_record(int(cell.gid1), self.h.tvec, self.h.idvec)
 
 
 
