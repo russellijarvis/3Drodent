@@ -1,5 +1,7 @@
 '''
-@author: russell
+@author: The parallel wiring related functions are written by Russell Jarvis rjjarvis@asu.edu
+
+
 '''
 import unittest
 import networkx

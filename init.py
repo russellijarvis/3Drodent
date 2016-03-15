@@ -2,7 +2,7 @@
 """
 Created on Tue Sep  8 17:01:22 2015
 
-@author: russell
+The parallel wiring related functions are written by Russell Jarvis rjjarvis@asu.edu
 """
 import allensdk
 from allensdk.api.queries.biophysical_perisomatic_api import \
@@ -29,6 +29,8 @@ utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
+if utils.COMM.rank==0:
+    pdb.set_trace()
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -36,6 +38,8 @@ if utils.COMM.rank==0:
     print 'experimental rig'
     #utils.plotgraph()
     hubs.save_matrix()
+    if utils.COMM.rank==0:
+        pdb.set_trace()
     #
     # A global analysis of hub nodes, using global complete adjacency matrices..
     #

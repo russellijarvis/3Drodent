@@ -262,7 +262,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
         self.my_icg = nx.DiGraph(self.my_icm)
-        self.my_ecg = nx.DiGraph(self.my_ecg)
+        self.my_ecg = nx.DiGraph(self.my_ecm)
         if RANK==0:
             assert np.sum(self.my_ecm)!=0
         if RANK==0:
@@ -395,10 +395,20 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 coordict['secnames'] = str(secnames)
                 shiplist.append(coordict)
                 self.h.pop_section()
-        total_array=np.matrix(( 3,len(shiplist) ))
-        total_list=[ (x,y,z) for x['coords'] in shiplist ]
-        for i in total_list:
-            total_array(x,y,z)
+
+        '''                
+        total_matrix=np.matrix(( 3,len(shiplist) ))
+        total_list=[ (x['coords'][0],x['coords'][1],x['coords'][2]) for x in shiplist ]
+        for i,j in enumerate(total_list):
+            print type(j)
+            #pdb.set_trace()
+            total_matrix[i][0]=j[0]
+            total_matrix[i][1]=j[1]
+            total_matrix[i][2]=j[2]
+
+        print total_array[:]
+        '''
+        
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
@@ -415,11 +425,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         polarity=int(h.Cell[int(cellind)].polarity)
         if polarity==1:
             #TODO pickle load the graphs here instead of making them manually.
-            self.ecg.add_edge(i,gidn,weight=r/0.4)
+
             self.ecm[i][gidn] = self.ecm[i][gidn] + 1
+            self.ecg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.ecm)!=0
         else:
-            self.icg.add_edge(i,gidn,weight=r/0.4)
             self.icm[i][gidn] = self.icm[i][gidn] + 1
             self.icg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.icm)!=0                
@@ -609,13 +619,17 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         If this does not prove fatal to the subsequent NEURON simulation. 
         
         '''
-        nx.compose(self.ecg, self.icg, self.whole_net)
-        isolatedlist=nx.isolate(self.whole_net)
+        import networkx as nx
+        self.whole_net=nx.compose(self.ecg, self.icg)
+        
+        #self.whole_net.compose(self.ecg, self.icg)
+        isolatedlist=nx.isolates(self.whole_net)
+        self.whole_net.remove_nodes_from(nx.isolates(self.whole_net))
         self.icg.remove_nodes_from(nx.isolates(self.icg))
         self.ecg.remove_nodes_from(nx.isolates(self.ecg))
         
         for i in isolatedlist:
-            print i
+            print i, "isolated", celldict[i]
             celldict[i]=None #hopefully this will destroy the cell.
         pass
         #TODO hoc object level code that destroys the cell object.
@@ -684,6 +698,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 #for s in self.synapse_list:
                 for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
                     self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
+            self.destroy_isolated_cells()
+
   
     def tracenet(self):
         '''
@@ -721,14 +737,23 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         from networkx.readwrite import json_graph
         json_graph.node_link_graph
         #Create a whole network of both transmitter types.
-        nx.compose(self.my_ecg, self.my_icg, self.my_whole_net)
-        d = json_graph.node_link_data(self.my_whole_net)#, directed, multigraph, attrs)
+        self.my_whole_net=nx.compose(self.my_ecg, self.my_icg)
+        
+        self.my_whole_net.remove_nodes_from(nx.isolates(self.my_whole_net))
+        self.my_icg.remove_nodes_from(nx.isolates(self.my_icg))
+        self.my_ecg.remove_nodes_from(nx.isolates(self.my_ecg))
+        
+        d =[]
+        d.append(self.my_ecm.tolist())
+        d.append(self.my_icm.tolist())
+        d.append(json_graph.node_link_data(self.my_whole_net))#, directed, multigraph, attrs)
+        d.append(json_graph.node_link_data(self.my_ecg))     
+        d.append(json_graph.node_link_data(self.my_icg))     
+        d.append(self.names_list)
+        
+        
         json.dump(d, open('web/js/my_whole_network.json','w'))
-        d = json_graph.node_link_data(self.my_ecg)     
-        json.dump(d, open('web/js/excitatory_network.json','w'))
-        d = json_graph.node_link_data(self.my_icg)     
-        json.dump(d, open('web/js/inhibitory_network.json','w'))
-
+        
         print('Wrote node-link JSON data to js/network.json')
         # open URL in running web browser
         #http_server.load_url('force/force.html')
