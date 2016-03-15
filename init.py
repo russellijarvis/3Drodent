@@ -23,6 +23,8 @@ from utils import Utils
 import numpy as np
 import pdb
 config = Config().load('config.json')
+# The readin flag enables the wiring to be read in from pre-existing 
+# pickled files with rank specific file names.
 utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
@@ -34,15 +36,20 @@ if utils.COMM.rank==0:
     print 'experimental rig'
     #utils.plotgraph()
     hubs.save_matrix()
+    #
+    # A global analysis of hub nodes, using global complete adjacency matrices..
+    #
     hubs.hubs()    
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
     utils.dumpjsongraph()
 
+
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
+#
+# A local analysis of hub nodes, using local incomplete adjacency matrices.
+#
+hubs.hubs()    
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
-hubs.insert_cclamp(0,1)
-#utils.graph_reduce()
-#utils.spikerecord()
 vec = utils.record_values()
 print 'setup recording'
 tstop = 2150
@@ -73,7 +80,7 @@ print type(tvec)
 print type(gidvec)
 def plot_raster(tvec,gidvec):
     pallete=[[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00], 
-                [0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33]])
+                [0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33]]
 
     fig = plt.figure()
     fig.clf()

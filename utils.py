@@ -23,6 +23,7 @@ import pickle
 import json
 import os
 
+
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
     def __init__(self, description, NCELL=40,readin=0):
@@ -31,11 +32,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref pc, py')
         h('pc = new ParallelContext()')
         h('py = new PythonObject()')
-        
-        
         setattr(self, 'readin',readin)
+        setattr(self, 'synapse_list',[])
         #self.readin=readin
-        self.synapse_list=[]
+        #self.synapse_list=[]
         self.stim = None
         self.stim_curr = None
         self.sampling_rate = None
@@ -64,11 +64,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.visited = np.zeros((self.NCELL, self.NCELL))
         self.ecg = networkx.DiGraph()
         self.icg = networkx.DiGraph()
+        self.whole_net = networkx.DiGraph()
         self.my_visited = np.zeros_like(self.icm)
         self.my_icm = np.zeros_like(self.icm)
         self.my_ecm = np.zeros_like(self.ecm)
         self.my_ecg = networkx.DiGraph()
         self.my_icg = networkx.DiGraph()
+        self.my_whole_net = networkx.DiGraph()
         self.debugdata=[]
 
     def prep_list(self):                    
@@ -383,8 +385,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 get_coz = str('coords.x[2]=z_xtra('
                               + str(seg.x) + ')')
                 h(get_coz)
-                coordict={} #Destroy dictionary some-how.
-                            #This is a pointer problem.
+                coordict={} 
                 coordict['hostfrom'] = pc.id()
                 coordict['coords'] = np.array(h.coords.to_python(),
                                           dtype=np.float64)
@@ -394,7 +395,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 coordict['secnames'] = str(secnames)
                 shiplist.append(coordict)
                 self.h.pop_section()
-               
+        total_array=np.matrix(( 3,len(shiplist) ))
+        total_list=[ (x,y,z) for x['coords'] in shiplist ]
+        for i in total_list:
+            total_array(x,y,z)
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
@@ -595,7 +599,29 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
 
 
-
+    def destroy_isolated_cells(self):        
+        '''
+        To be called locally on every rank
+        This method is intended to do two things.
+        First it finds and deletes isolated nodes from the 3 networkx objects with degree 0.
+        
+        Then it intends destroys the associated HOC cell objects with degree 0.
+        If this does not prove fatal to the subsequent NEURON simulation. 
+        
+        '''
+        nx.compose(self.ecg, self.icg, self.whole_net)
+        isolatedlist=nx.isolate(self.whole_net)
+        self.icg.remove_nodes_from(nx.isolates(self.icg))
+        self.ecg.remove_nodes_from(nx.isolates(self.ecg))
+        
+        for i in isolatedlist:
+            print i
+            celldict[i]=None #hopefully this will destroy the cell.
+        pass
+        #TODO hoc object level code that destroys the cell object.
+        #    cell=pc.gid2cell(i)
+        #    h('py.cell = New List()')
+            
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
         The function returns two adjacency matrices. One matrix whose elements are excitatory connections and another matrix of inhibitory connections"""
@@ -631,7 +657,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
                         cell1=pc.gid2cell(i)
-                        #cell1.soma
                         coordictlist.append(self.pre_synapse(i))
                     print 'end tx on rank ', COMM.rank
 
@@ -651,6 +676,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             fname='visited'+str(RANK)+'.p'
             with open(fname, 'wb') as handle:
                 pickle.dump(self.visited,handle)
+            self.destroy_isolated_cells()
         else:
             fname='synapse_list'+str(RANK)+'.p'
             with open(fname, 'rb') as handle:
@@ -693,6 +719,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
+        json_graph.node_link_graph
+        #Create a whole network of both transmitter types.
+        nx.compose(self.my_ecg, self.my_icg, self.my_whole_net)
+        d = json_graph.node_link_data(self.my_whole_net)#, directed, multigraph, attrs)
+        json.dump(d, open('web/js/my_whole_network.json','w'))
         d = json_graph.node_link_data(self.my_ecg)     
         json.dump(d, open('web/js/excitatory_network.json','w'))
         d = json_graph.node_link_data(self.my_icg)     

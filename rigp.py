@@ -38,37 +38,32 @@ class NetStructure():
         self.stim.dur = dur
         
         
-    '''    Antiquated.
-    def get_in(self,ma):
-         assert type(ma)==np.ndarray
-        old_row = 0
-        row_index = 0
-        for j in xrange(0, int(ma.shape[0])):
-            if sum(ma[j, :]) > old_row:  
-                old_row = sum(ma[j, :])
-                row_index = j
-        return row_index
 
-    def get_out(self,ma):
-        assert type(ma)==np.ndarray
-        old_column = 0
-        column_index = 0
-        for i in xrange(0, int(ma.shape[1])):
-            if sum(ma[:, i]) > old_column:  
-                old_column = sum(ma[:, i])
-                column_index = i
-        return column_index
-    '''
     def hubs(self):
         '''
+        This method is called on every rank with graphs that contain only partial connectivity information.
+        If there are two equal structural out-degree hubs this method only finds the first one.
+        '''
+
+        excin=networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm))
+        excout=networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm))
+        return (excin,excout)
+    
+    def hubs(self):
+        '''
+        This method is called only on rank 0 with a complete list of global identifiers.
         If there are two equal structural out-degree hubs this method only finds the first one.
         '''
         my_ecm=np.ndarray
         my_ecm=getattr(self,'my_ecm')
         colsums=np.array([np.sum(i) for i in np.column_stack(my_ecm)])
-        rowsums=np.array([np.sum(i) for i in np.row_stack(my_ecm)])
+        rowsums=np.array([np.sum(i) for i in np.row_stack(my_ecm)])        
         setattr(self,'outdegree',np.where(colsums == np.max(colsums))[0][0])
         setattr(self,'indegree',np.where(rowsums == np.max(rowsums))[0][0])
+        #print networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm)) , self.indegree
+        #print networkx.out_degree_centrality(networkx.DiGraph(self.my_ecm)) , self.outdegree
+        #assert networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm)) == self.indegree
+        #assert networkx.out_degree_centrality(networkx.DiGraph(self.my_ecm)) == self.outdegree
 
 
     def insert_cclamp(self,outdegree,indegree):
