@@ -30,7 +30,6 @@ info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
 if utils.COMM.rank==0:
-    pdb.set_trace()
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -39,12 +38,15 @@ if utils.COMM.rank==0:
     #utils.plotgraph()
     hubs.save_matrix()
     if utils.COMM.rank==0:
-        pdb.set_trace()
     #
     # A global analysis of hub nodes, using global complete adjacency matrices..
     #
     hubs.hubs()    
-    hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
+    amplitude=0.27 #pA or nA?
+    delay=1020.0 #ms
+    duration=750.0 #ms
+
+    hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
     utils.dumpjsongraph()
 
 
@@ -52,8 +54,11 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
 # A local analysis of hub nodes, using local incomplete adjacency matrices.
 #
-hubs.hubs()    
-hubs.insert_cclamp(hubs.outdegree,hubs.indegree)
+hubs.hubs()
+amplitude=0.27 #pA or nA?
+delay=1020.0 #ms
+duration=750.0 #ms
+hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'
 tstop = 2150
