@@ -33,7 +33,8 @@ d3.json('js/my_whole_network.json', function(error, data){
 	  //var inet=data[1];
   	  //var enet=data[1];//+data[1];
 	  //var Names=data[3];
-	  var respondents = 95 //get the length of Names.
+	  var respondents = matrix.length
+	  //95 //get the length of Names.
 	  var Colour = ["#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", "","#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", ""];
 
       emptyPerc = 0//0.4, //What % of the circle should become empty
@@ -42,6 +43,7 @@ d3.json('js/my_whole_network.json', function(error, data){
 		var Colour = ["#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", "","#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", ""];
 
 
+		/*
 		var respondents = 95, //Total number of respondents (i.e. the number that makes up the total group)
 			emptyPerc = 0.4, //What % of the circle should become empty
 			emptyStroke = Math.round(respondents*emptyPerc); 
@@ -50,7 +52,7 @@ d3.json('js/my_whole_network.json', function(error, data){
 		//Calculate how far the Chord Diagram needs to be rotated clockwise to make the dummy
 		//invisible chord center vertically
 		var offset = (2 * Math.PI) * (emptyStroke/(respondents + emptyStroke))/4;
-
+		*/
 		//Custom sort function of the chords to keep them in the original order
 		//function customSort(a,b) {
 		//	return 1;
@@ -62,7 +64,7 @@ d3.json('js/my_whole_network.json', function(error, data){
 			.sortChords(d3.descending) //which chord should be shown on top when chords cross. Now the biggest chord is at the bottom
 			.matrix(matrix);
 
-	     	  console.log(matrix);
+     	  console.log(matrix);
 
 			
 		var arc = d3.svg.arc()
@@ -105,7 +107,7 @@ d3.json('js/my_whole_network.json', function(error, data){
 		//The text also needs to be displaced in the horizontal directions
 		//And also rotated with the offset in the clockwise direction
 		g.append("text")
-			.each(function(d) { d.angle = ((d.startAngle + d.endAngle) / 2) + offset;})
+			.each(function(d) { d.angle = ((d.startAngle + d.endAngle) / 2) })
 			.attr("dy", ".35em")
 			.attr("class", "titles")
 			.attr("text-anchor", function(d) { return d.angle > Math.PI ? "end" : null; })
@@ -148,7 +150,7 @@ d3.json('js/my_whole_network.json', function(error, data){
 			.text(function(d) {
 				return [Math.round(d.source.value), " people from ", Names[d.target.index], " to ", Names[d.source.index]].join(""); 
 			});
-			//console.log(chords)
+			//	console.log(chords)
 
 
 
@@ -160,8 +162,8 @@ d3.json('js/my_whole_network.json', function(error, data){
 ////////////////////////////////////////////////////////////
 
 //Include the offset in de start and end angle to rotate the Chord diagram clockwise
-function startAngle(d) { return d.startAngle + offset; }
-function endAngle(d) { return d.endAngle + offset; }
+function startAngle(d) { return d.startAngle; }
+function endAngle(d) { return d.endAngle; }
 
 // Returns an event handler for fading a given chord group
 function fade(opacity) {
