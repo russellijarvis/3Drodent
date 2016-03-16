@@ -56,8 +56,9 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
 hubs.hubs()
 amplitude=0.27 #pA or nA?
-delay=1020.0 #ms
-duration=750.0 #ms
+delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+duration=5.0 #was 750 ms, however this was much too long.
+
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'
@@ -96,7 +97,6 @@ def plot_raster(tvec,gidvec):
     color=[1.00,0.38,0.60] # Choose differe Colors for each cell population
     plt.title("Raster Plot")
     plt.hold(True)
-    j=len(colors)
     plt.plot(tvec,gidvec,'.',c=color, markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
 

@@ -251,6 +251,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             
         ##Standard matrices that will always need to be reduced.    
         COMM.Barrier()
+        
+        self.names_list=np.array(self.names_list)
+        self.my_names_list=np.zeros_like(names_list)#, string), order, subok)
+        #self.my_names_list = [x for x in xrange(0,self.names_list)]#Create a global names list the same size as the local names lists.
+        COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+
+        
         self.my_visited = np.zeros_like(self.visited)
         COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
@@ -749,7 +757,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(self.my_whole_net))#, directed, multigraph, attrs)
         d.append(json_graph.node_link_data(self.my_ecg))     
         d.append(json_graph.node_link_data(self.my_icg))     
-        d.append(self.names_list)
+        d.append(self.my_names_list)
         
         
         json.dump(d, open('web/js/my_whole_network.json','w'))
