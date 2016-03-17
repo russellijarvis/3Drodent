@@ -29,7 +29,7 @@ utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
-if utils.COMM.rank==0:
+#if utils.COMM.rank==0:
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -37,7 +37,7 @@ if utils.COMM.rank==0:
     print 'experimental rig'
     #utils.plotgraph()
     hubs.save_matrix()
-    if utils.COMM.rank==0:
+    #if utils.COMM.rank==0:
     #
     # A global analysis of hub nodes, using global complete adjacency matrices..
     #

@@ -43,11 +43,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.gidlist=[]
         #TODO update initial attributes using the more pythonic setattr
 
-        #self.NCELL=NCELL
         setattr(self,'NCELL',NCELL)
         setattr(self,'celldict',{})
         setattr(self,'name_list',[])
-        #self.celldict={}
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
@@ -57,8 +55,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.cellmorphdict={}
         self.nclist = []
         self.seclists=[]
-        #self.tvec=self.h.Vector()    
-        #self.idvec=self.h.Vector() 
         self.icm = np.zeros((self.NCELL, self.NCELL))
         self.ecm = np.zeros((self.NCELL, self.NCELL))
         self.visited = np.zeros((self.NCELL, self.NCELL))
@@ -99,63 +95,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             else:
                 bothtrans.append(excitatory[i])
         return bothtrans
-    '''
-    Definition not used, so confuses development DELETE.
-    def read_local_swc(self):
-        h=self.h    
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        RANK=self.RANK
-        pc=h.ParallelContext()
-        morphs=[]
-        cells1=[]
-        self.initialize_hoc()
-        swclist=glob.glob('*.swc')
-        itergids = iter( i for i in range(RANK, len(swclist), SIZE) )
-        for i in itergids:
-            cell = h.mkcell(swclist[i])
-            self.generate_morphology(cell,swclist[i])
-            self.load_cell_parameters(cell, fit_ids[utils.cells_data[i]['type']])
-            cells1.append(cell1)
-            morphology.root
-            morphs.append(morphology)
-        return morphs,swclist,cells1
-    '''
-    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
-    #them in the network.
-    #Call a method test_cell inside the make_cells function.
-    def test_cell(self,d):#celltype='hip_pyr'):
-        from neuronunit.neuroelectro import NeuroElectroSummary
-        from neuronunit import neuroelectro
-        x = neuroelectro.NeuroElectroDataMap()
-        if 'hippocampus' in d:
-            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
-                                        ephysprop={'name':'spike width'})
-            observation = summary.get_observation(show=True)
-            #from neuronunit.tests import SpikeWidthTest
-            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
-            #Does not work due to problem with elephant.
-            #Note elephant requires pre-release version of neo.
-            pass
-        if 'neocortex' in d:
-  
-            x.set_neuron(nlex_id='sao2128417084')
-            #pass
-            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
-                                           # nucleus pyramidal neuron'.
-            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
-            #TODO find neurolex.org ID for Vm
  
-            pass
-            #x.get_values() # Gets values for spike width from this paper. 
-            #pdb.set_trace() 
-            #width = x.val # Spike width reported in that paper. 
-        if 'basket' in d:
-            x.set_neuron(nlex_id='nifext_56')
-            pass
-        if 'dg_basket' in d:
-            x.set_neuron(nlex_id='nlx_cell_100201')
-            pass
         
                 
     def make_cells(self,polarity):
@@ -184,12 +124,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #excitatory neuron.
             self.test_cell(d[i])
             if 'pyramid' in d[i]:                
-                #self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.pyr()
                 cell.polarity=1                        
             #inhibitory neuron.
             else:                              
-                #self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.basket()
                 cell.polarity=0           
       
@@ -256,8 +194,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.names_list=np.array(self.names_list)
         self.my_names_list=np.zeros_like(names_list)#, string), order, subok)
         #self.my_names_list = [x for x in xrange(0,self.names_list)]#Create a global names list the same size as the local names lists.
-        COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
+        #COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
+        #            root=0)
 
         self.my_visited = np.zeros_like(self.visited)
         COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
@@ -279,45 +217,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #if RANK==0:
         #    assert np.sum(self.my_visited)!=0
         
-    '''    
-    def dreduce(self,counter1, counter2, datatype):
-    #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
-        for item in counter2:
-            if item in counter1:
-                counter1[item] += counter2[item]
-            else:
-                counter1[item] = counter2[item]
-        return counter1
-    
-    dreduce = MPI.Op.Create(dreduce, commute=True)
-    
-    def graph_reduce(self):
-        self.my_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
-        self.my_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
 
-        if utils.COMM.rank==0:
-            assert np.sum(self.my_ecg)!=0
-            assert np.sum(self.my_icg)!=0
-    '''        
-    '''
-    def vec_reduce(self,tvec,gidvec):      
-        assert type(tvec)==np.array
-        assert type(gidvec)==np.array
-         
-        #print type(np.array(self.idvec.to_python()))
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        COMM = self.COMM
-        RANK=self.RANK
-        COMM.Barrier()
-        self.my_tvec = np.zeros_like(self.gidvec.to_python())
-        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.my_idvec = np.zeros_like(self.tvec.to_python())
-        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0
-        )
-    '''
 
     def prun(self,tstop):
         h=self.h    
@@ -865,6 +765,83 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('tvec = new Vector()')
         for cell in self.cells:
             self.h.pc.spike_record(int(cell.gid1), self.h.tvec, self.h.idvec)
+
+
+    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
+    #them in the network.
+    #Call a method test_cell inside the make_cells function.
+    def test_cell(self,d):#celltype='hip_pyr'):
+        from neuronunit.neuroelectro import NeuroElectroSummary
+        from neuronunit import neuroelectro
+        x = neuroelectro.NeuroElectroDataMap()
+        if 'hippocampus' in d:
+            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
+                                        ephysprop={'name':'spike width'})
+            observation = summary.get_observation(show=True)
+            #from neuronunit.tests import SpikeWidthTest
+            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+            #Does not work due to problem with elephant.
+            #Note elephant requires pre-release version of neo.
+            pass
+        if 'neocortex' in d:
+  
+            x.set_neuron(nlex_id='sao2128417084')
+            #pass
+            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                           # nucleus pyramidal neuron'.
+            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+            #TODO find neurolex.org ID for Vm
+ 
+            pass
+            #x.get_values() # Gets values for spike width from this paper. 
+            #pdb.set_trace() 
+            #width = x.val # Spike width reported in that paper. 
+        if 'basket' in d:
+            x.set_neuron(nlex_id='nifext_56')
+            pass
+        if 'dg_basket' in d:
+            x.set_neuron(nlex_id='nlx_cell_100201')
+            pass
+        
+            '''    
+    def dreduce(self,counter1, counter2, datatype):
+    #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
+        for item in counter2:
+            if item in counter1:
+                counter1[item] += counter2[item]
+            else:
+                counter1[item] = counter2[item]
+        return counter1
+    
+    dreduce = MPI.Op.Create(dreduce, commute=True)
+    
+    def graph_reduce(self):
+        self.my_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
+        self.my_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
+
+        if utils.COMM.rank==0:
+            assert np.sum(self.my_ecg)!=0
+            assert np.sum(self.my_icg)!=0
+    '''        
+    '''
+    def vec_reduce(self,tvec,gidvec):      
+        assert type(tvec)==np.array
+        assert type(gidvec)==np.array
+         
+        #print type(np.array(self.idvec.to_python()))
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        COMM.Barrier()
+        self.my_tvec = np.zeros_like(self.gidvec.to_python())
+        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+        self.my_idvec = np.zeros_like(self.tvec.to_python())
+        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
+                    root=0
+        )
+    '''
 
 
 
