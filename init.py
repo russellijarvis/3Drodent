@@ -42,9 +42,10 @@ if utils.COMM.rank==0:
     # A global analysis of hub nodes, using global complete adjacency matrices..
     #
     hubs.hubs()    
+   
     amplitude=0.27 #pA or nA?
-    delay=1020.0 #ms
-    duration=750.0 #ms
+    delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+    duration=100.0 #was 750 ms, however this was much too long.
 
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
     utils.dumpjsongraph()
@@ -56,9 +57,8 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
 hubs.hubs()
 amplitude=0.27 #pA or nA?
-delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=5.0 #was 750 ms, however this was much too long.
-
+delay=1020.0 #ms
+duration=750.0 #ms
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'

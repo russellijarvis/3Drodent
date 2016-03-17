@@ -111,7 +111,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
-        #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
+        #itergids = iter( (d[i][3],i)  for i in range(RANK+1, NCELL, SIZE-1) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
         for (j,i) in itergids:
@@ -381,6 +381,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
             else:
                 if (k['gid']%2==0):
+                    #TODO Find standard open source brain affiliated code for NMDA synapse
                     post_syn = secnames + ' ' + 'syn_ = new AmpaNmda(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
@@ -389,7 +390,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     self.seclists.append(secnames)
                     assert np.sum(self.ecm)!=0
                 else:
-                    #TODO Find standard open source brain affiliated code for NMDA synapse
                     post_syn = secnames + ' ' + 'syn_ = new ExpSid(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
@@ -542,7 +542,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pass
         #TODO hoc object level code that destroys the cell object.
         #    cell=pc.gid2cell(i)
-        #    h('py.cell = New List()')
+             
+        #    h('objref cell')
             
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
@@ -568,6 +569,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
+            #for s in xrange(1, SIZE-1): uncomment to if rank0 is free of cells.
+     
             for s in xrange(0, SIZE):
                 #Synchronise processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
