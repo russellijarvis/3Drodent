@@ -196,15 +196,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
-<<<<<<< HEAD
             hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
             h(hocstring)
             #pc.spike_record(i,self.tvec,self.gidvec)
-=======
-            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            #h(hocstring)
             pc.spike_record(i,self.tvec,self.gidvec)
->>>>>>> 707ccdf075dee3095f2a469c2f3a5c6cf4f2d876
             
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell
@@ -264,7 +259,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
 
-        
         self.my_visited = np.zeros_like(self.visited)
         COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
@@ -776,8 +770,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
 
     def generate_morphology(self, cell, morph_filename):
-        #This code is from the Allen Brain API examples.
-
+        '''
+        This code is from the Allen Brain API examples.
+        This code is no longer executed.
+        morph4.hoc is executed instead.
+        '''
         h = self.h
         swc = self.h.Import3d_SWC_read()
         swc.input(morph_filename)
@@ -803,6 +800,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     
     def load_cell_parameters(self, cell, type_index):
         #This code is from the Allen Brain API examples.
+        '''
+        This code is from the Allen Brain API examples.
+        This code is no longer executed.
+        morph4.hoc is executed instead.
+        It is just good py-hoc example code.
+        '''
+
         h=self.h
         passive = self.description.data['fit'][type_index]['passive'][0]
         conditions = self.description.data['fit'][type_index]['conditions'][0]
@@ -859,7 +863,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-
         for cell in self.cells:
             self.h.pc.spike_record(int(cell.gid1), self.h.tvec, self.h.idvec)
 
