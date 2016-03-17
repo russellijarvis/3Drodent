@@ -196,9 +196,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
             pc.set_gid2node(i,RANK)
             h('pc.cell('+str(i)+', nc)')
+<<<<<<< HEAD
             hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
             h(hocstring)
             #pc.spike_record(i,self.tvec,self.gidvec)
+=======
+            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
+            #h(hocstring)
+            pc.spike_record(i,self.tvec,self.gidvec)
+>>>>>>> 707ccdf075dee3095f2a469c2f3a5c6cf4f2d876
             
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell
