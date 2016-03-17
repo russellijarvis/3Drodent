@@ -62,7 +62,8 @@ duration=750.0 #ms
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'
-tstop = 2150
+tstop=10
+#tstop = 2150
 utils.COMM.barrier()
 utils.prun(tstop)
 import matplotlib 
