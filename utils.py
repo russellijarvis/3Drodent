@@ -72,6 +72,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.my_icg = networkx.DiGraph()
         self.my_whole_net = networkx.DiGraph()
         self.debugdata=[]
+        self.names_list=np.zeros((self.NCELL, self.NCELL))
+        self.my_names_list=np.zeros((self.NCELL, self.NCELL))
 
     def prep_list(self):                    
         '''
@@ -99,28 +101,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             else:
                 bothtrans.append(excitatory[i])
         return bothtrans
-    '''
-    Definition not used, so confuses development DELETE.
-    def read_local_swc(self):
-        h=self.h    
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        RANK=self.RANK
-        pc=h.ParallelContext()
-        morphs=[]
-        cells1=[]
-        self.initialize_hoc()
-        swclist=glob.glob('*.swc')
-        itergids = iter( i for i in range(RANK, len(swclist), SIZE) )
-        for i in itergids:
-            cell = h.mkcell(swclist[i])
-            self.generate_morphology(cell,swclist[i])
-            self.load_cell_parameters(cell, fit_ids[utils.cells_data[i]['type']])
-            cells1.append(cell1)
-            morphology.root
-            morphs.append(morphology)
-        return morphs,swclist,cells1
-    '''
+
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
     #Call a method test_cell inside the make_cells function.
@@ -144,8 +125,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
                                            # nucleus pyramidal neuron'.
             x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
-            #TODO find neurolex.org ID for Vm
- 
+            #TODO find neurolex.org ID for Vm 
             pass
             #x.get_values() # Gets values for spike width from this paper. 
             #pdb.set_trace() 
@@ -198,8 +178,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             h('pc.cell('+str(i)+', nc)')
             hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
             h(hocstring)
-            #pc.spike_record(i,self.tvec,self.gidvec)
-            
+        
             cell1=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
@@ -252,11 +231,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         ##Standard matrices that will always need to be reduced.    
         COMM.Barrier()
         
-        self.names_list=np.array(self.names_list)
-        self.my_names_list=np.zeros_like(names_list)#, string), order, subok)
+        #self.names_list=np.array(self.names_list)
+        #self.my_names_list=np.zeros_like(self.names_list)#, string), order, subok)
         #self.my_names_list = [x for x in xrange(0,self.names_list)]#Create a global names list the same size as the local names lists.
-        COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
+        #COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
+        #            root=0)
 
         
         self.my_visited = np.zeros_like(self.visited)
@@ -757,7 +736,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(self.my_whole_net))#, directed, multigraph, attrs)
         d.append(json_graph.node_link_data(self.my_ecg))     
         d.append(json_graph.node_link_data(self.my_icg))     
-        d.append(self.my_names_list)
+        #d.append(self.my_names_list)
         
         
         json.dump(d, open('web/js/my_whole_network.json','w'))
