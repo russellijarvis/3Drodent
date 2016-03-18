@@ -11,6 +11,7 @@ from mpi4py import MPI
 import numpy as np
 import logging
 import networkx
+from copy import deepcopy
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s - %(funcName)s - %(lineno)d')
@@ -34,6 +35,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('py = new PythonObject()')
         setattr(self, 'readin',readin)
         setattr(self, 'synapse_list',[])
+        setattr(self, 'namedict',{})
+        setattr(self, 'global_namedict',{})
+
         #self.readin=readin
         #self.synapse_list=[]
         self.stim = None
@@ -151,7 +155,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
-        #itergids = iter( i for i in range(RANK+1, NCELL, SIZE-1) )        
+        #Uncomment to make rank0 free of neurons.
+        #itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
         fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
         for (j,i) in itergids:
@@ -187,7 +192,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     
     def gcs(self,NCELL):
-        """Instantiate NEURON cell Objects in the Python variable space, such that cell
+        """Instantiate NEURON cell Objects in the Python variable space such
         that all cells have unique identifiers."""
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -212,31 +217,45 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
     
+    #def dreduce(self,list):
+    #    for i in list():
+    #        self.global_namedict.update(i)    
+
     def matrix_reduce(self, matrix=None):
-        # TODO make this method argument based so it can handle arbitary input matrices not one in particular
-        #
+        '''
+        collapse many incomplete rank specific matrices into complete global matrices on rank0.
+        '''
+        # TODO make this method argument based so it can handle arbitary input matrices not a few different particular
+        # types
         import networkx as nx
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        #import numpy as np
+
+        #dred = MPI.Op.Create(self.dreduce, commute=True)
+        #COMM.allreduce([self.namedict], op=dred)
+        #COMM.Reduce([self.namedict, MPI.DOUBLE], [self.namedict, MPI.DOUBLE], op=MPI.SUM,
+        #            root=0)        
+            
+                
 
         ##Argument matrix
         if matrix!=None:
             self.my_matrix = np.zeros_like(self.matrix)
             COMM.Reduce([self.matrix, MPI.DOUBLE], [self.my_matrix, MPI.DOUBLE], op=MPI.SUM,
                         root=0)
-            
-        ##Standard matrices that will always need to be reduced.    
+        
         COMM.Barrier()
         
-        #self.names_list=np.array(self.names_list)
-        #self.my_names_list=np.zeros_like(self.names_list)#, string), order, subok)
-        #self.my_names_list = [x for x in xrange(0,self.names_list)]#Create a global names list the same size as the local names lists.
-        #COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
-        #            root=0)
-
+        self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
+        self.global_namedict=COMM.gather(self.namedict, root=0)
+        if RANK==0:
+            self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
+            
+        ##Standard matrices that will always need to be reduced.    
+        
+        
         
         self.my_visited = np.zeros_like(self.visited)
         COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
@@ -258,6 +277,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #if RANK==0:
         #    assert np.sum(self.my_visited)!=0
         
+    
     '''    
     def dreduce(self,counter1, counter2, datatype):
     #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
@@ -647,6 +667,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
+            #for s in xrange(1, SIZE): if rank==0, is free of neurons.
+
             for s in xrange(0, SIZE):
                 #Synchronise processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
@@ -736,12 +758,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(self.my_whole_net))#, directed, multigraph, attrs)
         d.append(json_graph.node_link_data(self.my_ecg))     
         d.append(json_graph.node_link_data(self.my_icg))     
+        d.append(self.global_namedict)
         #d.append(self.my_names_list)
         
         
         json.dump(d, open('web/js/my_whole_network.json','w'))
         
-        print('Wrote node-link JSON data to js/network.json')
+        print('Wrote node-link JSON data to web/js/network.json')
         # open URL in running web browser
         #http_server.load_url('force/force.html')
 
