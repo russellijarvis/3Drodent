@@ -68,11 +68,11 @@ class NetStructure():
         #assert networkx.out_degree_centrality(networkx.DiGraph(self.my_ecm)) == self.outdegree
 
 
-    def insert_cclamp(self,outdegree,indegree):
+    def insert_cclamp(self,outdegree,indegree,amplitude,delay,duration):
         if outdegree in self.celldict.keys():
-            self.setup_iclamp_step(self.celldict[int(outdegree)], 0.27, 1020.0, 750.0) 
+            self.setup_iclamp_step(self.celldict[int(outdegree)], amplitude,delay,duration)#0.27, 1020.0, 750.0) 
         if indegree in self.celldict.keys():
-            self.setup_iclamp_step(self.celldict[int(indegree)], 0.27, 1020.0, 750.0)  
+            self.setup_iclamp_step(self.celldict[int(indegree)], amplitude,delay,duration)#0.27, 1020.0, 750.0)  
         
     def save_matrix(self):    
         SIZE=self.SIZE

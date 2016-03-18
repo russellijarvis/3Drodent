@@ -37,7 +37,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         setattr(self, 'synapse_list',[])
         setattr(self, 'namedict',{})
         setattr(self, 'global_namedict',{})
-
+        setattr(self,'global_spike',[])
         #self.readin=readin
         #self.synapse_list=[]
         self.stim = None
@@ -249,10 +249,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM.Barrier()
         
         self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
+        
         self.global_namedict=COMM.gather(self.namedict, root=0)
+        self.global_spike=COMM.gather([self.h.tvec.to_python(),self.h.gidvec.to_python()], root=0)
+        
         if RANK==0:
             self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
-            
+            pdb.set_trace()
         ##Standard matrices that will always need to be reduced.    
         
         
