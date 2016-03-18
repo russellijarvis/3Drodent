@@ -19,9 +19,9 @@ class NetStructure():
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
         setattr(self,'my_ecm',my_ecm)        
-        #self.my_ecm=my_ecm
-        self.my_icm=my_icm
-        self.my_visited=my_visited
+        #self.global_ecm=my_ecm
+        self.global_icm=my_icm
+        self.global_visited=my_visited
         setattr(self,'outdegree',0)
         setattr(self,'indegree',0)
         #self.indegree=0
@@ -47,8 +47,8 @@ class NetStructure():
         If there are two equal structural out-degree hubs this method only finds the first one.
         '''
 
-        excin=networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm))
-        excout=networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm))
+        excin=networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm))
+        excout=networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm))
         return (excin,excout)
     
     def hubs(self):
@@ -62,10 +62,10 @@ class NetStructure():
         rowsums=np.array([np.sum(i) for i in np.row_stack(my_ecm)])        
         setattr(self,'outdegree',np.where(colsums == np.max(colsums))[0][0])
         setattr(self,'indegree',np.where(rowsums == np.max(rowsums))[0][0])
-        #print networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm)) , self.indegree
-        #print networkx.out_degree_centrality(networkx.DiGraph(self.my_ecm)) , self.outdegree
-        #assert networkx.in_degree_centrality(networkx.DiGraph(self.my_ecm)) == self.indegree
-        #assert networkx.out_degree_centrality(networkx.DiGraph(self.my_ecm)) == self.outdegree
+        #print networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm)) , self.indegree
+        #print networkx.out_degree_centrality(networkx.DiGraph(self.global_ecm)) , self.outdegree
+        #assert networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm)) == self.indegree
+        #assert networkx.out_degree_centrality(networkx.DiGraph(self.global_ecm)) == self.outdegree
 
 
     def insert_cclamp(self,outdegree,indegree,amplitude,delay,duration):
@@ -85,21 +85,21 @@ class NetStructure():
         import pickle
         assert self.COMM.rank==0
         with open('excitatory_matrix.p', 'wb') as handle:
-            pickle.dump(self.my_ecm, handle)
+            pickle.dump(self.global_ecm, handle)
         with open('inhibitory_matrix.p', 'wb') as handle:
-            pickle.dump(self.my_icm, handle)
+            pickle.dump(self.global_icm, handle)
         print 'connection matrices saved'
         fig = plt.figure()
         fig.clf()
 
         import numpy as np
         assert RANK==0
-        assert np.sum(self.my_ecm)!=0
-        assert np.sum(self.my_icm)!=0
+        assert np.sum(self.global_ecm)!=0
+        assert np.sum(self.global_icm)!=0
 
         fig = plt.figure()
         fig.clf()
-        im = plt.imshow(self.my_visited, interpolation='nearest')    
+        im = plt.imshow(self.global_visited, interpolation='nearest')    
         plt.autoscale(True)
         plt.colorbar(im)
         plt.xlabel('columns = targets')
@@ -112,7 +112,7 @@ class NetStructure():
 
         fig = plt.figure()
         fig.clf()
-        im = plt.imshow(self.my_ecm, interpolation='nearest')    
+        im = plt.imshow(self.global_ecm, interpolation='nearest')    
         plt.autoscale(True)
         plt.colorbar(im)
         plt.xlabel('columns = targets')
@@ -126,7 +126,7 @@ class NetStructure():
         fig = plt.figure()
         fig.clf()
     
-        im = plt.imshow(self.my_icm, interpolation='nearest')
+        im = plt.imshow(self.global_icm, interpolation='nearest')
     
         plt.autoscale(True)
         plt.colorbar(im)

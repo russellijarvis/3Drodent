@@ -69,15 +69,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.ecg = networkx.DiGraph()
         self.icg = networkx.DiGraph()
         self.whole_net = networkx.DiGraph()
-        self.my_visited = np.zeros_like(self.icm)
-        self.my_icm = np.zeros_like(self.icm)
-        self.my_ecm = np.zeros_like(self.ecm)
-        self.my_ecg = networkx.DiGraph()
-        self.my_icg = networkx.DiGraph()
-        self.my_whole_net = networkx.DiGraph()
+        self.global_visited = np.zeros_like(self.icm)
+        self.global_icm = np.zeros_like(self.icm)
+        self.global_ecm = np.zeros_like(self.ecm)
+        self.global_ecg = networkx.DiGraph()
+        self.global_icg = networkx.DiGraph()
+        self.global_whole_net = networkx.DiGraph()
         self.debugdata=[]
         self.names_list=np.zeros((self.NCELL, self.NCELL))
-        self.my_names_list=np.zeros((self.NCELL, self.NCELL))
+        self.global_names_list=np.zeros((self.NCELL, self.NCELL))
 
     def prep_list(self):                    
         '''
@@ -242,8 +242,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
         ##Argument matrix
         if matrix!=None:
-            self.my_matrix = np.zeros_like(self.matrix)
-            COMM.Reduce([self.matrix, MPI.DOUBLE], [self.my_matrix, MPI.DOUBLE], op=MPI.SUM,
+            self.global_matrix = np.zeros_like(self.matrix)
+            COMM.Reduce([self.matrix, MPI.DOUBLE], [self.global_matrix, MPI.DOUBLE], op=MPI.SUM,
                         root=0)
         
         COMM.Barrier()
@@ -260,25 +260,25 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
         
         
-        self.my_visited = np.zeros_like(self.visited)
-        COMM.Reduce([self.visited, MPI.DOUBLE], [self.my_visited, MPI.DOUBLE], op=MPI.SUM,
+        self.global_visited = np.zeros_like(self.visited)
+        COMM.Reduce([self.visited, MPI.DOUBLE], [self.global_visited, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
 
-        self.my_icm = np.zeros_like(self.icm)
-        COMM.Reduce([self.icm, MPI.DOUBLE], [self.my_icm, MPI.DOUBLE], op=MPI.SUM,
+        self.global_icm = np.zeros_like(self.icm)
+        COMM.Reduce([self.icm, MPI.DOUBLE], [self.global_icm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        self.my_ecm = np.zeros_like(self.ecm)
-        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.my_ecm, MPI.DOUBLE], op=MPI.SUM,
+        self.global_ecm = np.zeros_like(self.ecm)
+        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.global_ecm, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        self.my_icg = nx.DiGraph(self.my_icm)
-        self.my_ecg = nx.DiGraph(self.my_ecm)
+        self.global_icg = nx.DiGraph(self.global_icm)
+        self.global_ecg = nx.DiGraph(self.global_ecm)
         if RANK==0:
-            assert np.sum(self.my_ecm)!=0
+            assert np.sum(self.global_ecm)!=0
         if RANK==0:
-            assert np.sum(self.my_icm)!=0
+            assert np.sum(self.global_icm)!=0
         #TODO check if visited is empty.
         #if RANK==0:
-        #    assert np.sum(self.my_visited)!=0
+        #    assert np.sum(self.global_visited)!=0
         
     
     '''    
@@ -294,12 +294,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     dreduce = MPI.Op.Create(dreduce, commute=True)
     
     def graph_reduce(self):
-        self.my_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
-        self.my_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
+        self.global_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
+        self.global_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
 
         if utils.COMM.rank==0:
-            assert np.sum(self.my_ecg)!=0
-            assert np.sum(self.my_icg)!=0
+            assert np.sum(self.global_ecg)!=0
+            assert np.sum(self.global_icg)!=0
     '''        
     '''
     def vec_reduce(self,tvec,gidvec):      
@@ -312,11 +312,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         COMM = self.COMM
         RANK=self.RANK
         COMM.Barrier()
-        self.my_tvec = np.zeros_like(self.gidvec.to_python())
-        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
+        self.global_tvec = np.zeros_like(self.gidvec.to_python())
+        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.global_tvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        self.my_idvec = np.zeros_like(self.tvec.to_python())
-        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
+        self.global_idvec = np.zeros_like(self.tvec.to_python())
+        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.global_idvec, MPI.DOUBLE], op=MPI.SUM,
                     root=0
         )
     '''
@@ -749,23 +749,23 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         from networkx.readwrite import json_graph
         json_graph.node_link_graph
         #Create a whole network of both transmitter types.
-        self.my_whole_net=nx.compose(self.my_ecg, self.my_icg)
+        self.global_whole_net=nx.compose(self.global_ecg, self.global_icg)
         
-        self.my_whole_net.remove_nodes_from(nx.isolates(self.my_whole_net))
-        self.my_icg.remove_nodes_from(nx.isolates(self.my_icg))
-        self.my_ecg.remove_nodes_from(nx.isolates(self.my_ecg))
+        self.global_whole_net.remove_nodes_from(nx.isolates(self.global_whole_net))
+        self.global_icg.remove_nodes_from(nx.isolates(self.global_icg))
+        self.global_ecg.remove_nodes_from(nx.isolates(self.global_ecg))
         
         d =[]
-        d.append(self.my_ecm.tolist())
-        d.append(self.my_icm.tolist())
-        d.append(json_graph.node_link_data(self.my_whole_net))#, directed, multigraph, attrs)
-        d.append(json_graph.node_link_data(self.my_ecg))     
-        d.append(json_graph.node_link_data(self.my_icg))     
+        d.append(self.global_ecm.tolist())
+        d.append(self.global_icm.tolist())
+        d.append(json_graph.node_link_data(self.global_whole_net))#, directed, multigraph, attrs)
+        d.append(json_graph.node_link_data(self.global_ecg))     
+        d.append(json_graph.node_link_data(self.global_icg))     
         d.append(self.global_namedict)
-        #d.append(self.my_names_list)
+        d.append(self.global_spike)
         
         
-        json.dump(d, open('web/js/my_whole_network.json','w'))
+        json.dump(d, open('web/js/global_whole_network.json','w'))
         
         print('Wrote node-link JSON data to web/js/network.json')
         # open URL in running web browser

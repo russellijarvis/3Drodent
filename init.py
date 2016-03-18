@@ -29,25 +29,23 @@ utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
-if utils.COMM.rank==0:
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
-    hubs=NetStructure(utils,utils.my_ecm,utils.my_icm,utils.visited,utils.celldict)
+    hubs=NetStructure(utils,utils.global_ecm,utils.global_icm,utils.visited,utils.celldict)
     print 'experimental rig'
     #utils.plotgraph()
     hubs.save_matrix()
     if utils.COMM.rank==0:
-    #
-    # A global analysis of hub nodes, using global complete adjacency matrices..
-    #
-    hubs.hubs()    
-    amplitude=0.27 #pA or nA?
-    delay=1020.0 #ms
-    duration=750.0 #ms
-
-    hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-    utils.dumpjsongraph()
+        #
+        # A global analysis of hub nodes, using global complete adjacency matrices..
+        #
+        hubs.hubs()    
+        amplitude=0.27 #pA or nA?
+        delay=1020.0 #ms
+        duration=750.0 #ms
+        hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+        utils.dumpjsongraph()
 
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
@@ -57,11 +55,12 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.hubs()
 amplitude=0.27 #pA or nA?
 delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=5.0 #was 750 ms, however this was much too long.
+duration=50.0 #was 750 ms, however this was much too long.
 
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'
+tstop=20
 tstop = 2150
 utils.COMM.barrier()
 utils.prun(tstop)
