@@ -46,7 +46,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.cells = []
         self.gidlist=[]
         #TODO update initial attributes using the more pythonic setattr
-
+        self.global_vec=[]
         #self.NCELL=NCELL
         setattr(self,'NCELL',NCELL)
         setattr(self,'celldict',{})
@@ -153,10 +153,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
         itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
-        #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
-        #This would require an iterator such as the following.
         #Uncomment to make rank0 free of neurons.
         #itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
+        
+        #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
+        #This would require an iterator such as the following.
+        
         fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
         for (j,i) in itergids:
@@ -236,28 +238,23 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #dred = MPI.Op.Create(self.dreduce, commute=True)
         #COMM.allreduce([self.namedict], op=dred)
         #COMM.Reduce([self.namedict, MPI.DOUBLE], [self.namedict, MPI.DOUBLE], op=MPI.SUM,
-        #            root=0)        
-            
-                
-
+        #            root=0)                    
         ##Argument matrix
         if matrix!=None:
             self.global_matrix = np.zeros_like(self.matrix)
             COMM.Reduce([self.matrix, MPI.DOUBLE], [self.global_matrix, MPI.DOUBLE], op=MPI.SUM,
                         root=0)
         
-        COMM.Barrier()
-        
+        #Create a local dictionary
         self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
         
-        self.global_namedict=COMM.gather(self.namedict, root=0)
-        self.global_spike=COMM.gather([self.h.tvec.to_python(),self.h.gidvec.to_python()], root=0)
         
+        self.global_namedict=COMM.gather(self.namedict, root=0)        
         if RANK==0:
             self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
-            pdb.set_trace()
         ##Standard matrices that will always need to be reduced.    
-        
+        self.global_spike=COMM.gather((self.h.tvec.to_python(),self.h.gidvec.to_python()), root=0)
+
         
         
         self.global_visited = np.zeros_like(self.visited)
@@ -277,49 +274,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         if RANK==0:
             assert np.sum(self.global_icm)!=0
         #TODO check if visited is empty.
-        #if RANK==0:
-        #    assert np.sum(self.global_visited)!=0
+        if self.readin==0:
+            if RANK==0:
+                assert np.sum(self.global_visited)!=0
         
-    
-    '''    
-    def dreduce(self,counter1, counter2, datatype):
-    #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
-        for item in counter2:
-            if item in counter1:
-                counter1[item] += counter2[item]
-            else:
-                counter1[item] = counter2[item]
-        return counter1
-    
-    dreduce = MPI.Op.Create(dreduce, commute=True)
-    
-    def graph_reduce(self):
-        self.global_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
-        self.global_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
 
-        if utils.COMM.rank==0:
-            assert np.sum(self.global_ecg)!=0
-            assert np.sum(self.global_icg)!=0
-    '''        
-    '''
-    def vec_reduce(self,tvec,gidvec):      
-        assert type(tvec)==np.array
-        assert type(gidvec)==np.array
-         
-        #print type(np.array(self.idvec.to_python()))
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        COMM = self.COMM
-        RANK=self.RANK
-        COMM.Barrier()
-        self.global_tvec = np.zeros_like(self.gidvec.to_python())
-        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.global_tvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.global_idvec = np.zeros_like(self.tvec.to_python())
-        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.global_idvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0
-        )
-    '''
 
     def prun(self,tstop):
         h=self.h    
@@ -429,13 +388,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         RANK=self.RANK
         #from neuron import h
         h=self.h  
-        
         pc=h.ParallelContext()
         polarity = 0        
         polarity=int(h.Cell[int(cellind)].polarity)
         if polarity==1:
             #TODO pickle load the graphs here instead of making them manually.
-
             self.ecm[i][gidn] = self.ecm[i][gidn] + 1
             self.ecg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.ecm)!=0
@@ -444,6 +401,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             self.icg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.icm)!=0                
             #TODO Add other edge attributes like secnames etc.
+        #pdb.set_trace()
+        print post_syn
         h('objref syn_')   
         h(post_syn)
         syn_=h.syn_
@@ -459,7 +418,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
-        
+        '''
+        Allocate a synaptic cleft
+        '''
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -670,16 +631,17 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
-            #for s in xrange(1, SIZE): if rank==0, is free of neurons.
-
+            #for s in xrange(1, SIZE): #if rank==0, is free of neurons.
             for s in xrange(0, SIZE):
+                print 's ', s, ' should start at 1 and increase.'
+            
                 #Synchronise processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
                 #overwritting a coordictlist before it has been properly exhausted.
                 COMM.barrier() #New line could save CPU but functional? Can be removed
                 coordictlist=[]
                 if COMM.rank==s:
-                    print 'begin creating message for transmision on rank ', COMM.rank
+                    print 'begin creating message for transmision on rank ', COMM.rank,' s ', s
                     celliter= iter(i for i in self.celldict.keys())  
                     for i in celliter:  
                         cell1=pc.gid2cell(i)
@@ -693,7 +655,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     self.post_synapse(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
-
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
             assert len(self.synapse_list)!=0
@@ -704,13 +665,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 pickle.dump(self.visited,handle)
             self.destroy_isolated_cells()
         else:
-            fname='synapse_list'+str(RANK)+'.p'
-            with open(fname, 'rb') as handle:
-                self.synapse_list=pickle.load(handle)
-                #for s in self.synapse_list:
-                for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
-                    self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
-            self.destroy_isolated_cells()
+            if COMM.rank!=0:               
+                fname='synapse_list'+str(RANK)+'.p'
+                with open(fname, 'rb') as handle:
+                    self.synapse_list=pickle.load(handle)
+                    #for s in self.synapse_list:
+                    for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
+                        self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
+                self.destroy_isolated_cells()
 
   
     def tracenet(self):

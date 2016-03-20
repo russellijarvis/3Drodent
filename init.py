@@ -23,7 +23,7 @@ from utils import Utils
 import numpy as np
 import pdb
 config = Config().load('config.json')
-# The readin flag enables the wiring to be read in from pre-existing 
+# The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
 utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
@@ -60,33 +60,47 @@ duration=50.0 #was 750 ms, however this was much too long.
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'
-tstop=20
+#tstop=20
 tstop = 2150
 utils.COMM.barrier()
 utils.prun(tstop)
-import matplotlib 
-matplotlib.use('Agg') 
-import matplotlib.pyplot as plt
-fig = plt.figure()
-fig.clf()
-plt.hold(True) #seems to be unecessary function call.
-#TODO outsource management of membrane traces to neo/elephant.
-#TODO use allreduce to reduce python dictionary to rank0
-#This is different to Allreduce.
-for gid,v in vec['v'].iteritems():
-    #print v.to_python()
-    plt.plot(vec['t'].to_python(),v.to_python())
-fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
-plt.hold(False) #seems to be unecessary function call.
-plt.xlabel('time (ms)')
-plt.ylabel('Voltage (mV)')
-plt.title('traces')
-plt.grid(True)
+utils.global_vec = COMM.gather(vec,root=0) # Results in a list of dictionaries on rank 0 called utils.global_vec
+# Convert the list of dictionaries into one big dictionary called global_vec (type conversion).
+utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
 
-tvec=utils.h.tvec.to_python()
-gidvec=utils.h.gidvec.to_python()
-print type(tvec)
-print type(gidvec)
+
+if utils.COMM.rank==0:        
+#import matplotlib 
+    import matplotlib.pyplot as plt
+    matplotlib.use('Agg') 
+    fig = plt.figure()
+    fig.clf()
+    plt.hold(True) #seems to be unecessary function call.
+    #TODO outsource management of membrane traces to neo/elephant.
+    #TODO use allreduce to reduce python dictionary to rank0
+    #This is different to Allreduce.
+    for gid,v in utils.global_vec['v'].iteritems():
+        #print v.to_python()
+        plt.plot(utils.global_vec['t'].to_python(),v.to_python())
+    fig.savefig('membrane_traces_from_all_ranks'+str(utils.COMM.rank)+'.png')    
+    plt.hold(False) #seems to be unecessary function call.
+    plt.xlabel('time (ms)')
+    plt.ylabel('Voltage (mV)')
+    plt.title('traces')
+    plt.grid(True)
+
+    for i,j in utils.global_spike:
+        i=np.array(i)
+        j=np.array(j)
+        tvec.extend(i)
+        gidvec.extend(j)
+        print tvec
+        print gidvec
+
+#tvec=utils.h.tvec.to_python()
+#gidvec=utils.h.gidvec.to_python()
+#print type(tvec)
+#print type(gidvec)
 def plot_raster(tvec,gidvec):
     pallete=[[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00], 
                 [0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33]]
@@ -98,8 +112,9 @@ def plot_raster(tvec,gidvec):
     plt.hold(True)
     plt.plot(tvec,gidvec,'.',c=color, markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
-
-plot_raster(tvec,gidvec)
+    
+if utils.COMM.rank==0:
+    plot_raster(tvec,gidvec)
     
 
 #Probably just get the spike distance.

@@ -13,15 +13,15 @@ import numpy as np
 #how to pass attributes from one object into this cls type object?
 
 class NetStructure():
-    def __init__(self,utils,my_ecm,my_icm,my_visited,celldict):
+    def __init__(self,utils,global_ecm,global_icm,global_visited,celldict):
         #assert rank=0
         self.COMM = MPI.COMM_WORLD
         self.SIZE = self.COMM.Get_size()
         self.RANK = self.COMM.Get_rank()
-        setattr(self,'my_ecm',my_ecm)        
-        #self.global_ecm=my_ecm
-        self.global_icm=my_icm
-        self.global_visited=my_visited
+        setattr(self,'global_ecm',global_ecm)        
+        #self.global_ecm=global_ecm
+        self.global_icm=global_icm
+        self.global_visited=global_visited
         setattr(self,'outdegree',0)
         setattr(self,'indegree',0)
         #self.indegree=0
@@ -56,10 +56,10 @@ class NetStructure():
         This method is called only on rank 0 with a complete list of global identifiers.
         If there are two equal structural out-degree hubs this method only finds the first one.
         '''
-        my_ecm=np.ndarray
-        my_ecm=getattr(self,'my_ecm')
-        colsums=np.array([np.sum(i) for i in np.column_stack(my_ecm)])
-        rowsums=np.array([np.sum(i) for i in np.row_stack(my_ecm)])        
+        global_ecm=np.ndarray
+        global_ecm=getattr(self,'global_ecm')
+        colsums=np.array([np.sum(i) for i in np.column_stack(global_ecm)])
+        rowsums=np.array([np.sum(i) for i in np.row_stack(global_ecm)])        
         setattr(self,'outdegree',np.where(colsums == np.max(colsums))[0][0])
         setattr(self,'indegree',np.where(rowsums == np.max(rowsums))[0][0])
         #print networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm)) , self.indegree
