@@ -29,6 +29,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
     def __init__(self, description, NCELL=40,readin=0):
         super(Utils, self).__init__(description)
+        # To Do 
+        # reduce the number of side effects associated with functions in this code
+        # by replacing a lot of instance attributes with local variables in methods.
+        # This will reduce the size of the interface, and increase modularity/maintainability.
+        # The hocobject and its name space is designed in such a way that that modifying its state one function
+        # will always result in global side effects.
         h=self.h  
         h('objref pc, py')
         h('pc = new ParallelContext()')
@@ -745,9 +751,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(self.global_ecg))     
         d.append(json_graph.node_link_data(self.global_icg))     
         d.append(self.global_namedict)
-        d.append(tvec)
-        d.append(gidvec)
-        #d.append(self.global_spike)
+        if type(tvec)!=type(utils.h):
+            if type(gidvec)!=type(utils.h):
+                d.append(tvec)
+                d.append(gidvec)
         
         
         json.dump(d, open('web/js/global_whole_network.json','w'))
