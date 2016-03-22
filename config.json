@@ -29,8 +29,8 @@
 	  
         "stdgui.hoc",
         "import3d.hoc",
-	"morph4.hoc",
 	"cell.hoc",
+	"morph4.hoc",
 	"stdgui.hoc",
 	"nrngui.hoc"
       ]
