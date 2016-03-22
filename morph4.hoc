@@ -1,4 +1,8 @@
-/*This file contains two templates one for constructing morphologically accurate cells, another for simplified reduced cells.*/
+/*This file contains two templates one for constructing morphologically accurate cells, another for simplified reduced cells.
+
+There is a problem in that the membrane mechanisms inserted do not match the mod, inc and h files in this git branch, if I make it so the code should run again
+
+*/
 
 /*begintemplate gapjunction
 public g
