@@ -100,15 +100,18 @@ def gather_spikes():
     #tvec and gidvec are Local variable copies of utils instance variables.
     tvec=np.zeros_like(np.array(utils.tvec.to_python))
     gidvec=np.zeros_like(np.array(utils.gidvec.to_python))
+    assert type(tvec)!=type(utils.h)
+    assert type(gidvec)!=type(utils.h)
 
     for i,j in utils.global_spike:# Unpack list of tuples
         #create local variables.
-        i=np.array(i)
-        j=np.array(j)
-        tvec.extend(i)
-        gidvec.extend(j)
-        #print utils.tvec
-        #print utils.gidvec
+        ii=np.array(i)
+        jj=np.array(j)
+        assert type(ii)!=type(utils.h)
+        assert type(jj)!=type(utils.h)
+
+        tvec.extend(ii)
+        gidvec.extend(jj)
     return tvec, gidvec 
     #utils.global_spike(utils.gidvec,utils.tvec)
 
