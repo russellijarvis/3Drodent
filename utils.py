@@ -745,14 +745,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.global_ecg.remove_nodes_from(nx.isolates(self.global_ecg))
         
         d =[]
-        d.append(self.global_ecm.tolist())
-        d.append(self.global_icm.tolist())
         d.append(json_graph.node_link_data(self.global_whole_net))#, directed, multigraph, attrs)
         d.append(json_graph.node_link_data(self.global_ecg))     
         d.append(json_graph.node_link_data(self.global_icg))     
         d.append(self.global_namedict)
-        if type(tvec)!=type(utils.h):
-            if type(gidvec)!=type(utils.h):
+        if type(tvec)!=type(self.h):
+            if type(gidvec)!=type(self.h):
                 d.append(tvec)
                 d.append(gidvec)
         

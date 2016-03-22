@@ -127,9 +127,11 @@ import matplotlib.pylab as p1
 list_spike_trains = [] # A misnomer since this is really a list of ISIs
 
 
-[list_spike_trains.append(h.cells.o(int(j)).isil.to_python()) for j in range(int(numcell-1))]
+#[list_spike_trains.append(h.cells.o(int(j)).isil.to_python()) for j in range(int(numcell-1))]
+list_spike_trains= [ tvec[i] for i in xrange(0,np.max(gidvec))]
+
 ti = 0
-tf = int(h.high_isi)# Below should be the same value
+#tf = int(h.high_isi)# Below should be the same value
 tf = np.max(np.array(list_spike_trains))
 
 """
@@ -260,12 +262,13 @@ fig.clf()
 
 p1.figure(figsize=(20,6))
 #p1.subplot(211)
+p1.hold(True)
+
 for j in xrange(int(ncell-1)): #range arguments are lists.
     for i in xrange(int(h.cells.o(j).isil.size())):
 
         #p1.plot([timespython[j][i], timespython[j][i]],[i, i+1],'k')
         #
-        p1.hold(True)
         p1.plot([h.cells.o(j).isil.x[i], h.cells.o(j).isil.x[i]],[j, j+1],'k')
         print [h.cells.o(j).isil.x[i], h.cells.o(j).isil.x[i]],[j, j+1]
         #int(h.cells.o(j).isil.x[i])
