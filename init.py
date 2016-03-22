@@ -36,16 +36,19 @@ if utils.COMM.rank==0:
     print 'experimental rig'
     #utils.plotgraph()
     hubs.save_matrix()
-    if utils.COMM.rank==0:
-        #
-        # A global analysis of hub nodes, using global complete adjacency matrices..
-        #
-        hubs.hubs()    
-        amplitude=0.27 #pA or nA?
-        delay=1020.0 #ms
-        duration=750.0 #ms
-        hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-        
+    #if utils.COMM.rank==0:
+    #
+    # A global analysis of hub nodes, using global complete adjacency matrices..
+    #
+    hubs.hubs()    
+   
+    amplitude=0.27 #pA or nA?
+    delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+    duration=100.0 #was 750 ms, however this was much too long.
+
+    hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+    utils.dumpjsongraph()
+
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
@@ -54,13 +57,14 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.hubs()
 amplitude=0.27 #pA or nA?
 delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=50.0 #was 750 ms, however this was much too long.
+duration=5.0 #was 750 ms, however this was much too long.
 
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 vec = utils.record_values()
 print 'setup recording'
 #tstop=20
-tstop = 2150
+#tstop=10
+tstop = 107
 utils.COMM.barrier()
 utils.prun(tstop)
 
@@ -92,12 +96,16 @@ if utils.COMM.rank==0:
     
 utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
 if utils.COMM.rank==0:        
-    for i,j in utils.global_spike:# Unpack list of tuples
+    #tvec and gidvec are Local variable copies of utils instance variables.
+    tvec=np.zeros_like(np.array(utils.tvec.to_python))
+    gidvec=np.zeros_like(np.array(utils.gidvec.to_python))
 
+    for i,j in utils.global_spike:# Unpack list of tuples
+        #create local variables.
         i=np.array(i)
         j=np.array(j)
-        utils.tvec.extend(i)
-        utils.gidvec.extend(j)
+        tvec.extend(i)
+        gidvec.extend(j)
         print utils.tvec
         print utils.gidvec
     #utils.global_spike(utils.gidvec,utils.tvec)
