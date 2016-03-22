@@ -43,11 +43,11 @@ if utils.COMM.rank==0:
     hubs.hubs()    
    
     amplitude=0.27 #pA or nA?
-    delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-    duration=100.0 #was 750 ms, however this was much too long.
+    delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+    duration=150.0 #was 750 ms, however this was much too long.
 
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-    utils.dumpjsongraph()
+    #utils.dumpjsongraph(utils.tvec,utils.gidvec)
 
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
@@ -56,15 +56,21 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
 hubs.hubs()
 amplitude=0.27 #pA or nA?
-delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=5.0 #was 750 ms, however this was much too long.
+delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+duration=60.0 #was 750 ms, however this was much too long.
 
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+
+amplitude=0.27 #pA or nA?
+delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+duration=200.0 #was 750 ms, however this was much too long.
+
+hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+
+
 vec = utils.record_values()
 print 'setup recording'
-#tstop=20
-#tstop=10
-tstop = 107
+tstop = 1570
 utils.COMM.barrier()
 utils.prun(tstop)
 
@@ -98,23 +104,17 @@ utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
 
 def gather_spikes():
     #tvec and gidvec are Local variable copies of utils instance variables.
-    tvec=np.zeros_like(np.array(utils.tvec.to_python))
-    gidvec=np.zeros_like(np.array(utils.gidvec.to_python))
+    tvec=[]#np.zeros_like(np.array(utils.tvec.to_python))
+    gidvec=[]#np.zeros_like(np.array(utils.gidvec.to_python))
     assert type(tvec)!=type(utils.h)
     assert type(gidvec)!=type(utils.h)
 
     for i,j in utils.global_spike:# Unpack list of tuples
         #create local variables.
-        ii=np.array(i)
-        jj=np.array(j)
-        assert type(ii)!=type(utils.h)
-        assert type(jj)!=type(utils.h)
-
-        tvec.extend(ii)
-        gidvec.extend(jj)
+        tvec.extend(i)
+        gidvec.extend(j)
     return tvec, gidvec 
-    #utils.global_spike(utils.gidvec,utils.tvec)
-
+ 
 
 if utils.COMM.rank==0:        
     tvec,gidvec=gather_spikes()
