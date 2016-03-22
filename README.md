@@ -1,4 +1,4 @@
-##3Drodentm
+##3Drodent
 
 A parallel algorithm for parallel distance dependant wiring of arbitrarily detailed neuron morphologies. The algorithm was made to facilitate the study of changes to dynamic network activity corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
