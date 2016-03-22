@@ -37,7 +37,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         setattr(self, 'synapse_list',[])
         setattr(self, 'namedict',{})
         setattr(self, 'global_namedict',{})
-        setattr(self,'global_spike',[])
+        setattr(self,'global_spike',tuple)
+        self.tvec=h.Vector()
+        self.gidvec=h.Vector()
+
         #self.readin=readin
         #self.synapse_list=[]
         self.stim = None
@@ -180,13 +183,26 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 cell.basket()
                 cell.polarity=0           
       
-            h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')                        
+      
+            #cell.connect2target(None)
+            # Bug this only detected the spike on the first cell.
+            #cell.soma[0] nc =  new NetCon(&v(0.5), nil)')    
+
+            #h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')    
+            #h('nc.threshold=-10')#-10mV spike detector threshold.                    
             pc.set_gid2node(i,RANK)
-            h('pc.cell('+str(i)+', nc)')
-            hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            h(hocstring)
+            
+            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html
+            #h('pc.cell('+str(i)+', nc)')
+            
+            nc = cell.connect2target(None)
+            pc.cell(i, nc) # Associate the cell with this host and gid
+            #### Record spikes of this cell
+            pc.spike_record(i, self.tvec, self.gidvec)
+            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
+            #h(hocstring)
         
-            cell1=pc.gid2cell(i)
+            assert None!=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
     
@@ -210,7 +226,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
         os.chdir(os.getcwd() + '/main')  
         self.make_cells(bothtrans)
-        assert len(h.List('NetCon')) != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
+        #ncsize=len(self.h.NetCon)
+
+        #assert ncsize != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
         pol=[ a.polarity for a in self.cells ]       
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
@@ -222,6 +240,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     #def dreduce(self,list):
     #    for i in list():
     #        self.global_namedict.update(i)    
+
+    def spike_reduce(self):
+        self.global_spike=self.COMM.gather([self.tvec.to_python(),self.gidvec.to_python()], root=0)
+
 
     def matrix_reduce(self, matrix=None):
         '''
@@ -253,7 +275,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         if RANK==0:
             self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
         ##Standard matrices that will always need to be reduced.    
-        self.global_spike=COMM.gather((self.h.tvec.to_python(),self.h.gidvec.to_python()), root=0)
 
         
         
@@ -724,7 +745,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(self.global_ecg))     
         d.append(json_graph.node_link_data(self.global_icg))     
         d.append(self.global_namedict)
-        d.append(self.global_spike)
+        d.append(self.tvec)
+        d.append(self.gidvec)
+        #d.append(self.global_spike)
         
         
         json.dump(d, open('web/js/global_whole_network.json','w'))

@@ -21,7 +21,7 @@ bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 #import unittest
 from utils import Utils
 import numpy as np
-import pdb
+import pdb 
 config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
@@ -45,8 +45,7 @@ if utils.COMM.rank==0:
         delay=1020.0 #ms
         duration=750.0 #ms
         hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-        utils.dumpjsongraph()
-
+        
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
@@ -64,13 +63,15 @@ print 'setup recording'
 tstop = 2150
 utils.COMM.barrier()
 utils.prun(tstop)
-utils.global_vec = COMM.gather(vec,root=0) # Results in a list of dictionaries on rank 0 called utils.global_vec
+
+utils.global_vec = utils.COMM.gather(vec,root=0) # Results in a list of dictionaries on rank 0 called utils.global_vec
 # Convert the list of dictionaries into one big dictionary called global_vec (type conversion).
-utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
+if utils.COMM.rank==0:
+    utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
 
 
 if utils.COMM.rank==0:        
-#import matplotlib 
+    import matplotlib 
     import matplotlib.pyplot as plt
     matplotlib.use('Agg') 
     fig = plt.figure()
@@ -88,14 +89,21 @@ if utils.COMM.rank==0:
     plt.ylabel('Voltage (mV)')
     plt.title('traces')
     plt.grid(True)
+    
+utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
+if utils.COMM.rank==0:        
+    for i,j in utils.global_spike:# Unpack list of tuples
 
-    for i,j in utils.global_spike:
         i=np.array(i)
         j=np.array(j)
-        tvec.extend(i)
-        gidvec.extend(j)
-        print tvec
-        print gidvec
+        utils.tvec.extend(i)
+        utils.gidvec.extend(j)
+        print utils.tvec
+        print utils.gidvec
+    #utils.global_spike(utils.gidvec,utils.tvec)
+    
+    utils.dumpjsongraph()
+
 
 #tvec=utils.h.tvec.to_python()
 #gidvec=utils.h.gidvec.to_python()
