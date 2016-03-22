@@ -725,7 +725,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
         return lsoftup
       
-    def dumpjsongraph(self):
+    def dumpjsongraph(self,tvec,gidvec):
         assert self.COMM.rank==0        
         import json
         import networkx as nx
@@ -745,8 +745,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(self.global_ecg))     
         d.append(json_graph.node_link_data(self.global_icg))     
         d.append(self.global_namedict)
-        d.append(self.tvec)
-        d.append(self.gidvec)
+        d.append(tvec)
+        d.append(gidvec)
         #d.append(self.global_spike)
         
         

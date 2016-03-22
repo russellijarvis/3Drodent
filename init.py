@@ -95,7 +95,8 @@ if utils.COMM.rank==0:
     plt.grid(True)
     
 utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
-if utils.COMM.rank==0:        
+
+def gather_spikes():
     #tvec and gidvec are Local variable copies of utils instance variables.
     tvec=np.zeros_like(np.array(utils.tvec.to_python))
     gidvec=np.zeros_like(np.array(utils.gidvec.to_python))
@@ -106,11 +107,15 @@ if utils.COMM.rank==0:
         j=np.array(j)
         tvec.extend(i)
         gidvec.extend(j)
-        print utils.tvec
-        print utils.gidvec
+        #print utils.tvec
+        #print utils.gidvec
+    return tvec, gidvec 
     #utils.global_spike(utils.gidvec,utils.tvec)
-    
-    utils.dumpjsongraph()
+
+
+if utils.COMM.rank==0:        
+    tvec,gidvec=gather_spikes()
+    utils.dumpjsongraph(tvec,gidvec)
 
 
 #tvec=utils.h.tvec.to_python()
