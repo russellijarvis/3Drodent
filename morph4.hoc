@@ -609,29 +609,29 @@ class Bwb(Cell):
 	
 	proc basket(){
 	    forall{
-  		//insert pas
+  		insert pas
 		e_pas = -65     //# mV
 		g_pas = 0.1e-3  //# S/cm2 
 		
-		////insert Nafbwb
-		////insert Kdrbwb
+		insert Nafbwb
+		insert Kdrbwb
 	    }
 	}	
 	
 	
 	proc OLM(){
 	    forall{
-		////insert  pas 
+		insert  pas 
 		e_pas = -65     //# mV
 		g_pas = 0.1e-3  //# S/cm2 
 		
-		////insert Nafbwb 
-		////insert Kdrbwb 
+		insert Nafbwb 
+		insert Kdrbwb 
 		
-		////insert Iholmw
-		////insert Caolmw
-		////insert ICaolmw
-		////insert KCaolmw
+		insert Iholmw
+		insert Caolmw
+		insert ICaolmw
+		insert KCaolmw
 	    }
 	}
 /*
@@ -652,12 +652,12 @@ class PyrAdr(Cell):
 "Pyramidal cell"*/
 proc pyr(){
   forall{
-      ////insert  pas 
+      insert  pas 
       g_pas = 0.0000357
-      ////insert  nacurrent 
-      ////insert  kacurrent 
-      ////insert  kdrcurrent 
-      ////insert  hcurrent 
+      insert  nacurrent 
+      insert  kacurrent 
+      insert  kdrcurrent 
+      insert  hcurrent 
       e_pas = -70//      mV
       cm = 1
       Ra = 150
@@ -691,23 +691,23 @@ proc pyr(){
 
 proc pyr2(){
 forall {
-	  ////insert pas
+	  insert pas
 	  cm = 1
 	  Ra = 100
 	  e_pas = -90
 	}
 
   forsec somatic {
-      ////insert Ca_LVAst 
-      ////insert Ca_HVA 
-      ////insert SKv3_1 
-      ////insert SK_E2 
-      ////insert K_Tst 
-      ////insert K_Pst 
-      ////insert Nap_Et2 
-      ////insert NaTa_t
-      ////insert CaDynamics_E2
-      ////insert Ih
+      insert Ca_LVAst 
+      insert Ca_HVA 
+      insert SKv3_1 
+      insert SK_E2 
+      insert K_Tst 
+      insert K_Pst 
+      insert Nap_Et2 
+      insert NaTa_t
+      insert CaDynamics_E2
+      insert Ih
       ek = -85
       ena = 50
       gIhbar_Ih = 0.0002
@@ -725,17 +725,17 @@ forall {
   }
 
 	forsec apical {
-      ////insert Ih
+      insert Ih
 
 		cm = 2
-		////insert Ih
-  	////insert SK_E2 
-  	////insert Ca_LVAst 
-  	////insert Ca_HVA 
-  	////insert SKv3_1 
-  	////insert NaTa_t 
-  	////insert Im 
-  	////insert CaDynamics_E2
+		insert Ih
+  	insert SK_E2 
+  	insert Ca_LVAst 
+  	insert Ca_HVA 
+  	insert SKv3_1 
+  	insert NaTa_t 
+  	insert Im 
+  	insert CaDynamics_E2
 		ek = -85
 		ena = 50
     decay_CaDynamics_E2 = 88.9 
@@ -753,7 +753,7 @@ forall {
 	
   forsec basal {
 		cm = 2
-		////insert Ih
+		insert Ih
 		gIhbar_Ih = 0.0002
   	g_pas = 0.0000535 
 	}
@@ -777,8 +777,8 @@ proc dchan(){
 // passive & active membrane 
 // --------------------------------------------------------------
 /*proc pyractive(){
-forall ////insert na
-forall ////insert kca
+forall insert na
+forall insert kca
   forsec all{
     ra        = 150
     global_ra = ra
@@ -819,7 +819,7 @@ forall ////insert kca
       //if (!aspiny) add_spines(dendritic_only,0.5)
       // passive
       for axonal {
-        ////insert pas
+        insert pas
         Ra = ra 
         cm = c_m 
         g_pas = 1/rm
@@ -831,7 +831,7 @@ forall ////insert kca
       forsec "node" g_pas = g_pas_node
 
       // na+ channels
-      forall ////insert na
+      forall insert na
       forsec apical{ gbar_na = gna_dend }
       //forsec "myelin" gbar_na = gna_dend
       //hill.gbar_na = gna_node
@@ -839,16 +839,16 @@ forall ////insert kca
       //forsec "node" gbar_na = gna_node
 
       // kv delayed rectifier channels
-     // iseg { ////insert kv  gbar_kv = gkv_axon }
-     // hill { ////insert kv  gbar_kv = gkv_axon }
-     // soma { ////insert kv  gbar_kv = gkv_soma }
+     // iseg { insert kv  gbar_kv = gkv_axon }
+     // hill { insert kv  gbar_kv = gkv_axon }
+     // soma { insert kv  gbar_kv = gkv_soma }
 
       // dendritic channels
       forsec basal {
-        ////insert km    gbar_km  = gkm
-        ////insert kca   gbar_kca = gkca
-        ////insert ca    gbar_ca = gca
-        ////insert cad
+        insert km    gbar_km  = gkm
+        insert kca   gbar_kca = gkca
+        insert ca    gbar_ca = gca
+        insert cad
       }
 
       forsec somatic {
@@ -876,8 +876,8 @@ forall ////insert kca
 
 
 proc stellate(){*/
-//forall ////insert na
-//forall ////insert kca
+//forall insert na
+//forall insert kca
 /* --------------------------------------------------------------
    Two-compartment reduced model for neocortical electrogenesis
    DEMO
@@ -899,12 +899,12 @@ proc stellate(){*/
         // note, L and Ra are set in "init()" procedure
 
                          // uses the associated ".mod" files
-        ////insert na        // na.mod
-        ////insert km        // km.mod
-        ////insert kca       // kca.mod
-        ////insert ca        // ca.mod
-        ////insert cad       // cad.mod
-        ////insert pas     
+        insert na        // na.mod
+        insert km        // km.mod
+        insert kca       // kca.mod
+        insert ca        // ca.mod
+        insert cad       // cad.mod
+        insert pas     
     }
 
     forsec axonal {
@@ -912,8 +912,8 @@ proc stellate(){*/
         L = 10            // area of 100 um^2
         // note Ra of axon is irrelevant to the 2-comp simulation
 
-        ////insert na         // na.mod
-        ////insert kv         // kv.mod
+        insert na         // na.mod
+        insert kv         // kv.mod
     }
 
 
@@ -1184,12 +1184,12 @@ factor=$1
 
 proc basket(){
   forsec somatic{
-  	////insert pas
+  	insert pas
 		 e_pas = -65     //# mV
 		 g_pas = 0.1e-3  //# S/cm2 
 	   
-		 ////insert Nafbwb
-		 ////insert Kdrbwb
+		 insert Nafbwb
+		 insert Kdrbwb
  }
 }	
 
@@ -1222,17 +1222,17 @@ class Ow(Cell):
 	//def set_conductances(self):
 proc OLM(){
 		forsec somatic{
-		////insert  pas 
+		insert  pas 
 		e_pas = -65     //# mV
 		g_pas = 0.1e-3  //# S/cm2 
 
-		////insert Nafbwb 
-		////insert Kdrbwb 
+		insert Nafbwb 
+		insert Kdrbwb 
 
-		////insert Iholmw
-		////insert Caolmw
-		////insert ICaolmw
-		////insert KCaolmw
+		insert Iholmw
+		insert Caolmw
+		insert ICaolmw
+		insert KCaolmw
 		}
 }
 /*
@@ -1251,12 +1251,12 @@ class PyrAdr(Cell):
 	"Pyramidal cell"*/
 proc pyr(){
   forall{
-			   ////insert  pas 
+			   insert  pas 
 			   g_pas = 0.0000357
-			   ////insert  nacurrent 
-			   ////insert  kacurrent 
-			   ////insert  kdrcurrent 
-			   ////insert  hcurrent 
+			   insert  nacurrent 
+			   insert  kacurrent 
+			   insert  kdrcurrent 
+			   insert  hcurrent 
 		    e_pas = -70//      mV
 			   cm = 1
 			   Ra = 150
