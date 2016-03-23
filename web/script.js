@@ -27,8 +27,32 @@ var outerRadius = Math.min(width, height) / 2  - (mobileScreen ? 80 : 100),
 d3.json('js/my_whole_network.json', function(error, data){
   if (error) throw error;
 	  //console.log(data);
+	  /*for (var prop in data) {
+ 		 if (data.hasOwnProperty(prop)) { 
+		  // or if (Object.prototype.hasOwnProperty.call(obj,prop)) for safety...
+			alert("prop: " + prop + " value: " + data[prop])
+		  }
+		}
+		*/
+		function iterate_over(data) { // more of a procedure than a function
+		for (var i = 0; i < data.length; i++) {
+ 	   		console.log(data[i]);
+ 	   		if(data[i] !== null && typeof data[i] === 'object'){
+ 	   			for (var prop in data[i]) {
+					 if (data[i].hasOwnProperty(prop)) { 
+					  // or if (Object.prototype.hasOwnProperty.call(obj,prop)) for safety...
+						console.log("prop: " + prop + " value: " + data[i][prop])
+						  console.log(data[i][prop]);
+
+					  }
+	 	   		}
+ 	   		}
+		}
+		return 0; }
+
+
 	  var matrix=whole_net=data[0];
-	  console.log(matrix);
+	  
 	  
 	  //var inet=data[1];
   	  //var enet=data[1];//+data[1];
@@ -37,8 +61,8 @@ d3.json('js/my_whole_network.json', function(error, data){
 	  //95 //get the length of Names.
 	  var Colour = ["#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", "","#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", ""];
 
-      emptyPerc = 0//0.4, //What % of the circle should become empty
-      emptyStroke = Math.round(respondents*emptyPerc); 
+      emptyPerc = 0;//0.4, //What % of the circle should become empty
+      emptyStroke = 0;//Math.round(respondents*emptyPerc); 
 		var Names = ["Acquisition and cleaning", "D3",  "NLTK",  "Matlab",  "Python",  "R", "Mapping", "Inventor", "3D Slicer", "", "Acquisition and cleaning", "D3",  "NLTK",  "Matlab",  "Python",  "R", "Mapping", "Inventor", "3D Slicer",""];
 		var Colour = ["#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", "","#1f78b4", "#6a3d9a", "#8dd3c7", "#fdbf6f","#ff7f00","#e31a1c","#cacaca","#b2df8a","#fb9a99", ""];
 
