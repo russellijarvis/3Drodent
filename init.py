@@ -44,7 +44,7 @@ if utils.COMM.rank==0:
    
     amplitude=0.27 #pA or nA?
     delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-    duration=150.0 #was 750 ms, however this was much too long.
+    duration=400.0 #was 750 ms, however this was much too long.
 
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
     #utils.dumpjsongraph(utils.tvec,utils.gidvec)
@@ -57,13 +57,13 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 hubs.hubs()
 amplitude=0.27 #pA or nA?
 delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=60.0 #was 750 ms, however this was much too long.
+duration=400.0 #was 750 ms, however this was much too long.
 
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 
 amplitude=0.27 #pA or nA?
 delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=200.0 #was 750 ms, however this was much too long.
+duration=400.0 #was 750 ms, however this was much too long.
 
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
 
@@ -138,9 +138,33 @@ def plot_raster(tvec,gidvec):
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
     
 if utils.COMM.rank==0:
+
+    
     plot_raster(tvec,gidvec)
     
-
+    # Compute the multivariate SPIKE distance
+    list_spike_trains = [ [] for i in xrange(0,int(np.max(gidvec)+1))] #define a list of lists.
+    for i,j in enumerate(gidvec):
+        list_spike_trains[int(j)].append(tvec[int(i)])
+    ti = 0
+    tf = np.max(np.array(list_spike_trains))
+    list_spike_trains=np.array(list_spike_trains).astype(int)
+    from isi_distance import Kdistance
+    K = Kdistance()
+    t, Sb = K.multivariate_spike_distance(list_spike_trains, ti, tf, 2000)
+    fig = plt.figure()
+    fig.clf()    
+    plt.title('Inter Spike Intervals')
+    plt.plot(t,Sb,'k')
+    plt.xlabel("Time (ms)")
+    sfin = 'kreuz_multivariate'+str(utils.COMM.rank)+'.png'    
+    plt.savefig(sfin)
+    import json
+    d =[]
+    d.append(t.tolist())
+    d.append(Sb.tolist())
+    json.dump(d, open('web/js/spike_distance.json','w'))    
+    print('Wrote node-link JSON data to web/js/network.json')
 #Probably just get the spike distance.
 
 #import http_server as hs

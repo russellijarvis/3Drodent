@@ -731,33 +731,44 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 lsoftup.append((int(utils.h.NetCon[i].srcgid()),int(utils.h.NetCon[i].postcell().gid1),utils.celldict[srcind],utils.celldict[tgtind]))
         return lsoftup
       
-    def dumpjsongraph(self,tvec,gidvec):
-        assert self.COMM.rank==0        
+        
+    def dumpjsongraph(utils,tvec,gidvec):
+        assert utils.COMM.rank==0        
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        json_graph.node_link_graph
+        h=utils.h
+        import pickle
+        #json_graph.node_link_graph
         #Create a whole network of both transmitter types.
-        self.global_whole_net=nx.compose(self.global_ecg, self.global_icg)
+        utils.global_whole_net=nx.compose(utils.global_ecg, utils.global_icg)
         
-        self.global_whole_net.remove_nodes_from(nx.isolates(self.global_whole_net))
-        self.global_icg.remove_nodes_from(nx.isolates(self.global_icg))
-        self.global_ecg.remove_nodes_from(nx.isolates(self.global_ecg))
+        utils.global_whole_net.remove_nodes_from(nx.isolates(utils.global_whole_net))
+        utils.global_icg.remove_nodes_from(nx.isolates(utils.global_icg))
+        utils.global_ecg.remove_nodes_from(nx.isolates(utils.global_ecg))
         
         d =[]
-        d.append(json_graph.node_link_data(self.global_whole_net))#, directed, multigraph, attrs)
-        d.append(json_graph.node_link_data(self.global_ecg))     
-        d.append(json_graph.node_link_data(self.global_icg))     
-        d.append(self.global_namedict)
-        if type(tvec)!=type(self.h):
-            if type(gidvec)!=type(self.h):
+        d.append(utils.global_ecm.tolist())     
+        d.append(utils.global_icm.tolist())  
+        whole=nx.to_numpy_matrix(utils.global_whole_net)  
+        d.append(whole.tolist()) 
+        d.append(utils.global_whole_net.tolist())
+        d.append(json_graph.node_link_data(utils.global_whole_net))                 
+        d.append(json_graph.node_link_data(utils.global_whole_net))#, directed, multigraph, attrs)
+        d.append(json_graph.node_link_data(utils.global_ecg))     
+        d.append(json_graph.node_link_data(utils.global_icg))     
+        d.append(utils.global_namedict)
+        if type(tvec)!=type(utils.h):
+            if type(gidvec)!=type(utils.h):
                 d.append(tvec)
                 d.append(gidvec)
-        
-        
+    
         json.dump(d, open('web/js/global_whole_network.json','w'))
-        
+        d=json.load(open('web/js/global_whole_network.json','r'))
+    #    pickle.dump(d,open('list_of_pickle.p'),'w')
+    
         print('Wrote node-link JSON data to web/js/network.json')
+    dumpjsongraph(utils,tvec,gidvec)
         # open URL in running web browser
         #http_server.load_url('force/force.html')
 
