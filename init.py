@@ -21,19 +21,18 @@ bp = BiophysicalPerisomaticApi('http://api.brain-map.org')
 #import unittest
 from utils import Utils
 import numpy as np
-import pdb
+import pdb 
 config = Config().load('config.json')
-# The readin flag enables the wiring to be read in from pre-existing 
+# The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
 utils = Utils(config,NCELL=40,readin=1)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
-#if utils.COMM.rank==0:
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
-    hubs=NetStructure(utils,utils.my_ecm,utils.my_icm,utils.visited,utils.celldict)
+    hubs=NetStructure(utils,utils.global_ecm,utils.global_icm,utils.visited,utils.celldict)
     print 'experimental rig'
     #utils.plotgraph()
     hubs.save_matrix()
@@ -43,11 +42,11 @@ if utils.COMM.rank==0:
     #
     hubs.hubs()    
     amplitude=0.27 #pA or nA?
-    delay=1020.0 #ms
-    duration=750.0 #ms
+    delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+    duration=400.0 #was 750 ms, however this was much too long.
 
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-    utils.dumpjsongraph()
+    #utils.dumpjsongraph(utils.tvec,utils.gidvec)
 
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
@@ -56,38 +55,75 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
 hubs.hubs()
 amplitude=0.27 #pA or nA?
-delay=50 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-duration=5.0 #was 750 ms, however this was much too long.
+delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+duration=400.0 #was 750 ms, however this was much too long.
 
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+
+amplitude=0.27 #pA or nA?
+delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
+duration=400.0 #was 750 ms, however this was much too long.
+
+hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+
+
 vec = utils.record_values()
 print 'setup recording'
-tstop = 2150
+tstop = 1570
 utils.COMM.barrier()
 utils.prun(tstop)
-import matplotlib 
-matplotlib.use('Agg') 
-import matplotlib.pyplot as plt
-fig = plt.figure()
-fig.clf()
-plt.hold(True) #seems to be unecessary function call.
-#TODO outsource management of membrane traces to neo/elephant.
-#TODO use allreduce to reduce python dictionary to rank0
-#This is different to Allreduce.
-for gid,v in vec['v'].iteritems():
-    #print v.to_python()
-    plt.plot(vec['t'].to_python(),v.to_python())
-fig.savefig('membrane_traces'+str(utils.COMM.rank)+'.png')    
-plt.hold(False) #seems to be unecessary function call.
-plt.xlabel('time (ms)')
-plt.ylabel('Voltage (mV)')
-plt.title('traces')
-plt.grid(True)
 
-tvec=utils.h.tvec.to_python()
-gidvec=utils.h.gidvec.to_python()
-print type(tvec)
-print type(gidvec)
+utils.global_vec = utils.COMM.gather(vec,root=0) # Results in a list of dictionaries on rank 0 called utils.global_vec
+# Convert the list of dictionaries into one big dictionary called global_vec (type conversion).
+if utils.COMM.rank==0:
+    utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
+
+
+if utils.COMM.rank==0:        
+    import matplotlib 
+    import matplotlib.pyplot as plt
+    matplotlib.use('Agg') 
+    fig = plt.figure()
+    fig.clf()
+    plt.hold(True) #seems to be unecessary function call.
+    #TODO outsource management of membrane traces to neo/elephant.
+    #TODO use allreduce to reduce python dictionary to rank0
+    #This is different to Allreduce.
+    for gid,v in utils.global_vec['v'].iteritems():
+        #print v.to_python()
+        plt.plot(utils.global_vec['t'].to_python(),v.to_python())
+    fig.savefig('membrane_traces_from_all_ranks'+str(utils.COMM.rank)+'.png')    
+    plt.hold(False) #seems to be unecessary function call.
+    plt.xlabel('time (ms)')
+    plt.ylabel('Voltage (mV)')
+    plt.title('traces')
+    plt.grid(True)
+    
+utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
+
+def gather_spikes():
+    #tvec and gidvec are Local variable copies of utils instance variables.
+    tvec=[]#np.zeros_like(np.array(utils.tvec.to_python))
+    gidvec=[]#np.zeros_like(np.array(utils.gidvec.to_python))
+    assert type(tvec)!=type(utils.h)
+    assert type(gidvec)!=type(utils.h)
+
+    for i,j in utils.global_spike:# Unpack list of tuples
+        #create local variables.
+        tvec.extend(i)
+        gidvec.extend(j)
+    return tvec, gidvec 
+ 
+
+if utils.COMM.rank==0:        
+    tvec,gidvec=gather_spikes()
+    utils.dumpjsongraph(tvec,gidvec)
+
+
+#tvec=utils.h.tvec.to_python()
+#gidvec=utils.h.gidvec.to_python()
+#print type(tvec)
+#print type(gidvec)
 def plot_raster(tvec,gidvec):
     pallete=[[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00], 
                 [0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33]]
@@ -99,10 +135,32 @@ def plot_raster(tvec,gidvec):
     plt.hold(True)
     plt.plot(tvec,gidvec,'.',c=color, markeredgecolor = 'none')
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
-
-plot_raster(tvec,gidvec)
     
-
+if utils.COMM.rank==0:
+	plot_raster(tvec,gidvec)
+    # Compute the multivariate SPIKE distance
+    list_spike_trains = [ [] for i in xrange(0,int(np.max(gidvec)+1))] #define a list of lists.
+    for i,j in enumerate(gidvec):
+        list_spike_trains[int(j)].append(tvec[int(i)])
+    ti = 0
+    tf = np.max(np.array(list_spike_trains))
+    list_spike_trains=np.array(list_spike_trains).astype(int)
+    from isi_distance import Kdistance
+    K = Kdistance()
+    t, Sb = K.multivariate_spike_distance(list_spike_trains, ti, tf, 2000)
+    fig = plt.figure()
+    fig.clf()    
+    plt.title('Inter Spike Intervals')
+    plt.plot(t,Sb,'k')
+    plt.xlabel("Time (ms)")
+    sfin = 'kreuz_multivariate'+str(utils.COMM.rank)+'.png'    
+    plt.savefig(sfin)
+    import json
+    d =[]
+    d.append(t.tolist())
+    d.append(Sb.tolist())
+    json.dump(d, open('web/js/spike_distance.json','w'))    
+    print('Wrote node-link JSON data to web/js/network.json')
 #Probably just get the spike distance.
 
 #import http_server as hs
