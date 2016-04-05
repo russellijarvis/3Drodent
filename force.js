@@ -1,3 +1,43 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+
+}
+
+.chord path {
+  fill-opacity: .67;
+  stroke: #000;
+  stroke-width: .5px;
+}
+
+#tooltip{
+    visibility: hidden;
+    position: absolute;
+    background-color: dodgerblue;
+     border-radius: 4px;
+     padding: 5px;
+    z-index: 10;
+    color:white;
+    font-size:14px;
+}
+    
+
+</style>
+
+
+<body>  
+
+
+<!--Offline  
+<script type="text/javascript" src="d3.v3.min.js"></script> 
+
+Online 
+-->
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
 
 var width = 960,
     height = 500;
@@ -14,9 +54,14 @@ var svg = d3.select("body").append("svg")
     .attr("height", height);
 
 
-d3.json('js/exc2.json', function(error, data){//,igraph) {
 
+var hostname = window.location.hostname;
+var isDev = (hostname == 'localhost') || (hostname == '127.0.0.1');
+var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box that appears when the user moves the mouse pointer over an element.
+
+d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
+  var matrix=data[2];
 	  console.log(data);
 
   graph=data[0];
@@ -70,3 +115,6 @@ d3.json('js/exc2.json', function(error, data){//,igraph) {
   });
 });
 /*Sums up to exactly 100*/
+
+</script>
+</div>
