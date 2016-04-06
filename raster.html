@@ -14,7 +14,13 @@
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
     
-        
+
+  /*     
+  Written by Dulini Mendis
+  polluted with comments by Russell Jarvis
+  */
+
+
 var neurons = Object.keys(data[7]).map(function(key){ return data[7][key] }); //object with filenames and whether its excitatory or inhibitory
 
 //Get excitatory and inhibitory neurons indices separately
