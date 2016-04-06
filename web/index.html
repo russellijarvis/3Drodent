@@ -66,8 +66,9 @@ var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box tha
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
 	/*
-	Written by Dulini Mendis
-	With comments by Russell Jarvis
+    Written by Dulini Mendis
+    https://github.com/DuliniMendis/RodentTest/blob/gh-pages/index.html
+	polluted with comments by Russell Jarvis
 	*/
     var matrix=data[2]; /* adjacency matrix 37 x 37 of all excitatory and inhibitory neurons, although the size of the adjacency
     matrix is liable to change with different simulations
