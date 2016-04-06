@@ -25,7 +25,7 @@ import pdb
 config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
-utils = Utils(config,NCELL=40,readin=1)
+utils = Utils(config,NCELL=100,readin=0)
 info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.matrix_reduce()
