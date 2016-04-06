@@ -27,8 +27,6 @@ body {
 
 </style>
 
-
-
 <body>  
      <div id=tooltip></div>
       <div style="color:#0000FF">
@@ -48,7 +46,7 @@ body {
     </div>
     <div style="color:#0000FF">
 
-Offline  
+<!--Offline --> 
 <script type="text/javascript" src="d3.v3.min.js"></script> 
 <!--
 Online 
@@ -67,59 +65,49 @@ var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box tha
 
 
 
-
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
-
-
-    var matrix=data[2]; // adjacency matrix 37 x 37 of all excitatory and inhibitory neurons, although the size might change in the future.
-    
-        
-    var neurons = Object.keys(data[7]).map(function(key){ return data[7][key] }); //object with filenames and whether its excitatory or inhibitory
-    
+	/*
+	Written by Dulini Mendis
+	With comments by Russell Jarvis
+	*/
+    var matrix=data[2]; /* adjacency matrix 37 x 37 of all excitatory and inhibitory neurons, although the size of the adjacency
+    matrix is liable to change with different simulations
+    */ 
+    var neurons = Object.keys(data[7]).map(function(key){ return data[7][key] }); //object with filenames and whether its excitatory or inhibitory    
     //Get excitatory and inhibitory neurons indices separately
-    var neuronType = neurons.map(function(a) {return a[1];});
-    
+    var neuronType = neurons.map(function(a) {return a[1];});    
     var neuronInds = neuronType.map(function(a,i){ if(a==0 && i<matrix.length){ return i;} else return null; });//Get the inhibitory neuron types
     var inNeuronInds = neuronInds.filter(function(a){return a!=null;}); //remove nulls from the array.
     var neuronInds = neuronType.map(function(a,i){ if(a==1 && i<matrix.length){ return i;} else return null; });//Get the excitatory neuron types
     var exNeuronInds = neuronInds.filter(function(a){return a!=null;}); //remove nulls from the array.
     var sortNeuronInds = exNeuronInds.concat(inNeuronInds); //Extend the excitatory neuron list by concatonating it with inhibitory neuron list. The result is a sorted list called sortNeuronInds 
-    console.log(sortNeuronInds);    
-    
     //Sort adjacency matrix
     var temp = [];   
     var vSortRow = [];
     var sortMat = [];
-    
-    //In java script an array is emulated by an array of arrays, just like in low level languages.  
+    //In JS a matrix is emulated by an array of arrays, just like in Java level languages.  
     for(i=0;i<sortNeuronInds.length;i++){//for every column        
         temp = matrix[sortNeuronInds[i]];//not a matrix element value at i.
-        //because js, matrices are composed of arrays of arrays. indexing into the parent-array simply retrieves a child array.
-        console.log('temp= ',temp, ' is temp an array type or element type?: ', typeof(temp))
-    
+        //because matrices are consist of arrays of arrays, indexing into the parent-array simply retrieves a child array.
         vSortRow = [];//initialise a new row array.
         
         for(j=0;j<sortNeuronInds.length;j++){//for every row.
             vSortRow.push(temp[sortNeuronInds[j]]);//fill up the row array 
         }
         vSortRow.map(function(a){console.log(a);})
-        //a function that takes a as an input and returns the input
-        //I get the sense that map is for mapping functions.
         sortMat.push(vSortRow.map(function(a){return a;}));       
-        //fill up the sorted matrix by appending to an array.
+        //fill up the parent array (matrix) by appending to it re-sorted row arrays.
     }
     
-    matrix=sortMat;
-        
-        
-    var chord = d3.layout.chord()
-    
+    matrix=sortMat;/*
+    A substitution of variables for the sake of code convention
+    and readability.
+    */    
+    var chord = d3.layout.chord()    
         .padding(.05)
         .sortSubgroups(d3.descending)
         .matrix(matrix);
-        //console.log('print the chord log follows')
-    
     
     var width = 800,
         height = 600,
@@ -146,9 +134,7 @@ d3.json('js/global_whole_network.json', function(error, data){
         .on("mousemove", function(){
                 tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");
             })
-        .on("mouseout", fade(1));
-        
-            
+        .on("mouseout", fade(1));            
     
     var ticks = svg.append("g").selectAll("g")
         .data(chord.groups)
@@ -217,6 +203,7 @@ d3.json('js/global_whole_network.json', function(error, data){
            tooltip.style("visibility", "hidden");
       };
     }
+
 });
 </script>
 </div>
