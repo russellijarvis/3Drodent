@@ -29,13 +29,12 @@
 
 <body>  
 
-
+<!--
 <script type="text/javascript" src="d3.v3.min.js"></script> 
 
-<!--Offline  
-Online 
+Offline  
+Online -->
 <script src="//d3js.org/d3.v3.min.js"></script>
--->
 <script>
 
 var width = 960,
@@ -61,15 +60,17 @@ var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box tha
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
       console.log(data);
-  /*graphi=data[3];//+data[1];
-  entire_nodes=graph.nodes;
-  entire_links=graph.links;
-  entire_nodes.push.apply(graph.nodes, graphi.nodes);
-  entire_links.push.apply(graph.links, graphi.links);
-    */
+    var neurons = Object.keys(data[7]).map(function(key){ return data[7][key] }); //object with filenames and whether its excitatory or inhibitory
+
+
 
 
   graph=data[3];
+  for (var i=0; i<graph.nodes.length; ++i) {
+       graph.nodes[i].name=neurons[i][0];
+       console.log(graph.nodes[i].name);
+     }
+     
   var NameProvider = graph.nodes;
   force
       .nodes(graph.nodes)
@@ -90,6 +91,19 @@ d3.json('js/global_whole_network.json', function(error, data){
       .attr("r", 5)
       .style("fill", function(d) { return color(d.group); })
       .call(force.drag);
+
+
+    
+    // Returns an array of tick angles and labels, given a group.
+    function groupTicks(d) {
+      var k = (d.endAngle - d.startAngle) / d.value;
+      return d3.range(0, d.value, 1000).map(function(v, i) {
+        return {
+          angle: v * k + d.startAngle + (d.endAngle-d.startAngle)/2,
+          label: neurons[sortNeuronInds[d.index]][0]
+        };
+      });
+    }
 
   node.append("title")
       .text(function(d) { return d.name; });
