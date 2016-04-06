@@ -100,18 +100,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         allrows = pickle.load(open('allrows.p', 'rb'))
         allrows.remove(allrows[0])#The first list element is the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
-        excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        interneurons = [i for i in allrows if i[5]=="interneuron" ]     
-        bothtrans=[]
+        markram = [i for i in allrows if "markram" in i]        
+        excitatory = [i for i in markram if i[5]!="interneuron" ]        
+        interneurons = [i for i in markram if i[5]=="interneuron" ]    
+        #excitatory = [i for i in allrows if i[5]!="interneuron" ]        
+        #interneurons = [i for i in allrows if i[5]=="interneuron" ]     
         if len(excitatory) > len(interneurons):
             length=len(interneurons)
         else:
             length=len(excitatory)
-            
         bothtrans = [ excitatory[i] for i in xrange(0,length) if not(i>(2/3)*length) ]
         bothtrans.extend([ interneurons[i] for i in xrange(0,length) if (i>(2/3)*length) ])
         return bothtrans
-        #bothtrans = filter(lambda i: i>(2/3)*length, my_list)
         '''
         for i in xrange(0,length):
             #Check to see how often index is divisible by 3.
@@ -169,9 +169,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('tvec = new Vector()')
         pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
-        itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
+        #itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #Uncomment to make rank0 free of neurons.
-        #itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
+        itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
         
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
@@ -197,11 +197,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 cell.basket()
                 cell.polarity=0           
       
-      
+            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html        
             pc.set_gid2node(i,RANK)
-            
-            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html
-            
             nc = cell.connect2target(None)
             pc.cell(i, nc) # Associate the cell with this host and gid
             #### Record spikes of this cell
@@ -233,7 +230,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #ncsize=len(self.h.NetCon)
 
         #assert ncsize != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
-        pol=[ a.polarity for a in self.cells ]       
+        #Following probably not actually used anymore
+        #pol=[ a.polarity for a in self.cells ]       
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
         self.h('forall{ for(x,0){ insert xtra }}')
@@ -390,15 +388,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 shiplist.append(coordict)
                 self.h.pop_section()
 
-        '''                
+        '''  
+        TODO ship a numpy matrix instead of a list of coordinates, as on the receiving end 
+        using np.where may speed up calculations.              
+        
         total_matrix=np.matrix(( 3,len(shiplist) ))
         total_list=[ (x['coords'][0],x['coords'][1],x['coords'][2]) for x in shiplist ]
         for i,j in enumerate(total_list):
             print type(j)
             #pdb.set_trace()
-            total_matrix[i][0]=j[0]
-            total_matrix[i][1]=j[1]
-            total_matrix[i][2]=j[2]
+            total_matrix[i,0]=j[0]
+            total_matrix[i,1]=j[1]
+            total_matrix[i,2]=j[2]
 
         print total_array[:]
         '''
@@ -446,7 +447,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
         '''
-        Allocate a synaptic cleft
+        Allocate a synaptic cleft from exhuastive collision detection.
         '''
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -547,6 +548,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             def test_wiring(q,s,data):
                 '''
                 A test of to see if variables are updating properly.
+                The concatonation of section and segment iterables
+                will always yield a unique string, if and when the iteraterators update.
                 '''
                 if q+1<=len(s):
                     print len(s),' ',q,' ',q+1
@@ -607,7 +610,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
 
 
-    def destroy_isolated_cells(self):        
+    def destroy_isolated_cells(self,cells):        
         '''
         To be called locally on every rank
         This method is intended to do two things.
@@ -658,10 +661,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
-            #for s in xrange(1, SIZE): #if rank==0, is free of neurons.
+            for s in xrange(1, SIZE): #if rank==0, is free of neurons.
             #print 's ', s, ' should start at 1 and increase.'
             
-            for s in xrange(0, SIZE):
+            #for s in xrange(0, SIZE):
                 
                 #SynchroniZe processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
@@ -693,7 +696,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 pickle.dump(self.visited,handle)
             self.destroy_isolated_cells()
         else:
-            if COMM.rank!=0:               
+            if COMM.rank!=0: 
+                print 'excluding rank 0 from loading cells, keeping associated RAM free for plotting'              
                 fname='synapse_list'+str(RANK)+'.p'
                 with open(fname, 'rb') as handle:
                     self.synapse_list=pickle.load(handle)
