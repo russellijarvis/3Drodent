@@ -78,7 +78,7 @@ function nodeid(n) {
 }
 
 function linkid(l) {
-  var u = nodeid(l.source),
+  var u = nodeid(l.source),//Ie in concrete terms  this gives an identifier to synapses.
       v = nodeid(l.target);
   return u<v ? u+"|"+v : v+"|"+u;
 }
