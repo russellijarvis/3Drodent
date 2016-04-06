@@ -40,17 +40,14 @@ class NetStructure():
         self.stim.dur = dur
         
         
-
+    '''   
     def hubs(self):
-        '''
         This method is called on every rank with graphs that contain only partial connectivity information.
         If there are two equal structural out-degree hubs this method only finds the first one.
-        '''
-
         excin=networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm))
         excout=networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm))
         return (excin,excout)
-    
+    '''
     def hubs(self):
         '''
         This method is called only on rank 0 with a complete list of global identifiers.
@@ -60,13 +57,10 @@ class NetStructure():
         global_ecm=getattr(self,'global_ecm')
         colsums=np.array([np.sum(i) for i in np.column_stack(global_ecm)])
         rowsums=np.array([np.sum(i) for i in np.row_stack(global_ecm)])        
-        setattr(self,'outdegree',np.where(colsums == np.max(colsums))[0][0])
-        setattr(self,'indegree',np.where(rowsums == np.max(rowsums))[0][0])
-        #print networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm)) , self.indegree
-        #print networkx.out_degree_centrality(networkx.DiGraph(self.global_ecm)) , self.outdegree
-        #assert networkx.in_degree_centrality(networkx.DiGraph(self.global_ecm)) == self.indegree
-        #assert networkx.out_degree_centrality(networkx.DiGraph(self.global_ecm)) == self.outdegree
-
+        outdegree=np.where(colsums == np.max(colsums))[0][0])
+        indegree=np.where(rowsums == np.max(rowsums))[0][0])
+        return (outdegree,indegree)
+    
 
     def insert_cclamp(self,outdegree,indegree,amplitude,delay,duration):
         if outdegree in self.celldict.keys():
@@ -75,13 +69,10 @@ class NetStructure():
             self.setup_iclamp_step(self.celldict[int(indegree)], amplitude,delay,duration)#0.27, 1020.0, 750.0)  
         
     def save_matrix(self):    
+        #save and plot matrix.
         SIZE=self.SIZE
         RANK=self.RANK
 
-        import matplotlib 
-        matplotlib.use('Agg') 
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import LogNorm 
         import pickle
         assert self.COMM.rank==0
         with open('excitatory_matrix.p', 'wb') as handle:
@@ -97,6 +88,12 @@ class NetStructure():
         assert np.sum(self.global_ecm)!=0
         assert np.sum(self.global_icm)!=0
 
+        #TODO replace with plotly.
+        import matplotlib 
+        matplotlib.use('Agg') 
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LogNorm 
+        
         fig = plt.figure()
         fig.clf()
         im = plt.imshow(self.global_visited, interpolation='nearest')    
