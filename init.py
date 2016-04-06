@@ -119,6 +119,9 @@ def gather_spikes():
 if utils.COMM.rank==0:        
     tvec,gidvec=gather_spikes()
     utils.dumpjsongraph(tvec,gidvec)
+    dumpjsongraph(self,tvec,gidvec)
+        # open URL in running web browser
+    http_server.load_url('web/index.html')
 
 
 #tvec=utils.h.tvec.to_python()
@@ -138,10 +141,7 @@ def plot_raster(tvec,gidvec):
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
     
 if utils.COMM.rank==0:
-
-    
     plot_raster(tvec,gidvec)
-    
     # Compute the multivariate SPIKE distance
     list_spike_trains = [ [] for i in xrange(0,int(np.max(gidvec)+1))] #define a list of lists.
     for i,j in enumerate(gidvec):

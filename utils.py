@@ -98,7 +98,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         of a balance between excitation and inhibition.
         '''
         allrows = pickle.load(open('allrows.p', 'rb'))
-        allrows.remove(allrows[0])#The first list element are the column titles. 
+        allrows.remove(allrows[0])#The first list element is the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
         excitatory = [i for i in allrows if i[5]!="interneuron" ]        
         interneurons = [i for i in allrows if i[5]=="interneuron" ]     
@@ -107,13 +107,21 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             length=len(interneurons)
         else:
             length=len(excitatory)
+            
+        bothtrans = [ excitatory[i] for i in xrange(0,length) if not(i>(2/3)*length) ]
+        bothtrans.extend([ interneurons[i] for i in xrange(0,length) if (i>(2/3)*length) ])
+        return bothtrans
+        #bothtrans = filter(lambda i: i>(2/3)*length, my_list)
+        '''
         for i in xrange(0,length):
             #Check to see how often index is divisible by 3.
-            if ((i%3)==0): #2/3 excitatory to reflect cortical balance of transmitters.
+            #Its this clumsy method of appending neurons to the list that means the matrices need sorting in the first place.
+            if (i>(2/3)*length): #2/3 excitatory to reflect cortical balance of transmitters.
                 bothtrans.append(interneurons[i]) 
             else:
                 bothtrans.append(excitatory[i])
-        return bothtrans
+        '''        
+        
 
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
@@ -190,24 +198,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 cell.polarity=0           
       
       
-            #cell.connect2target(None)
-            # Bug this only detected the spike on the first cell.
-            #cell.soma[0] nc =  new NetCon(&v(0.5), nil)')    
-
-            #h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')    
-            #h('nc.threshold=-10')#-10mV spike detector threshold.                    
             pc.set_gid2node(i,RANK)
             
             #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html
-            #h('pc.cell('+str(i)+', nc)')
             
             nc = cell.connect2target(None)
             pc.cell(i, nc) # Associate the cell with this host and gid
             #### Record spikes of this cell
-            pc.spike_record(i, self.tvec, self.gidvec)
-            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            #h(hocstring)
-        
+            pc.spike_record(i, self.tvec, self.gidvec)        
             assert None!=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
@@ -408,7 +406,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
-
+        '''
+        Allocate a synaptic cleft from file.
+        '''
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -659,10 +659,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
             #for s in xrange(1, SIZE): #if rank==0, is free of neurons.
-            for s in xrange(0, SIZE):
-                print 's ', s, ' should start at 1 and increase.'
+            #print 's ', s, ' should start at 1 and increase.'
             
-                #Synchronise processes here, all ranks must have finished receiving 
+            for s in xrange(0, SIZE):
+                
+                #SynchroniZe processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
                 #overwritting a coordictlist before it has been properly exhausted.
                 COMM.barrier() #New line could save CPU but functional? Can be removed
@@ -732,7 +733,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return lsoftup
       
         
-    def dumpjsongraph(utils,tvec,gidvec):
+    def dumpjsongraph(self,tvec,gidvec):
         assert utils.COMM.rank==0        
         import json
         import networkx as nx
@@ -744,6 +745,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         utils.global_whole_net=nx.compose(utils.global_ecg, utils.global_icg)
         
         utils.global_whole_net.remove_nodes_from(nx.isolates(utils.global_whole_net))
+        
         utils.global_icg.remove_nodes_from(nx.isolates(utils.global_icg))
         utils.global_ecg.remove_nodes_from(nx.isolates(utils.global_ecg))
         
@@ -751,6 +753,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(utils.global_ecm.tolist())     
         d.append(utils.global_icm.tolist())  
         whole=nx.to_numpy_matrix(utils.global_whole_net)  
+        #TODO sort whole (network) here in Python, as Python is arguably easier to understand than JS. 
         d.append(whole.tolist()) 
         d.append(utils.global_whole_net.tolist())
         d.append(json_graph.node_link_data(utils.global_whole_net))                 
@@ -758,20 +761,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         d.append(json_graph.node_link_data(utils.global_ecg))     
         d.append(json_graph.node_link_data(utils.global_icg))     
         d.append(utils.global_namedict)
-        if type(tvec)!=type(utils.h):
-            if type(gidvec)!=type(utils.h):
-                d.append(tvec)
-                d.append(gidvec)
-    
+        if (type(tvec)!=type(utils.h) and type(gidvec)!=type(utils.h)):
+            d.append(tvec)
+            d.append(gidvec)
         json.dump(d, open('web/js/global_whole_network.json','w'))
         d=json.load(open('web/js/global_whole_network.json','r'))
-    #    pickle.dump(d,open('list_of_pickle.p'),'w')
+        #read the object just to prove that is readable.
+        d=None #destroy the object.    
+        print('Wrote JSON data to web/js/network.json')
     
-        print('Wrote node-link JSON data to web/js/network.json')
-    dumpjsongraph(utils,tvec,gidvec)
-        # open URL in running web browser
-        #http_server.load_url('force/force.html')
-
 
         
 
