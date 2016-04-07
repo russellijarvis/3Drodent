@@ -59,7 +59,7 @@ var isDev = (hostname == 'localhost') || (hostname == '127.0.0.1');
 var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box that appears when the user moves the mouse pointer over an element.
 
 
-d3.json('js/global_whole_network.json', function(error, data){
+d3.json('js/global_whole_network.json', function(error, json){
   if (error) throw error;
   root = json;
   update();
