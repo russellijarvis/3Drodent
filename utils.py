@@ -100,18 +100,20 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         allrows = pickle.load(open('allrows.p', 'rb'))
         allrows.remove(allrows[0])#The first list element is the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
-        markram = [i for i in allrows if "markram" in i]        
-        excitatory = [i for i in markram if i[5]!="interneuron" ]        
-        interneurons = [i for i in markram if i[5]=="interneuron" ]    
+        markram = [i for i in allrows if "Markram" in i]        
+        excitatory = [i for i in allrows if i[5]!="interneuron" ]        
+        interneurons = [i for i in allrows if i[5]=="interneuron" ]    
         #excitatory = [i for i in allrows if i[5]!="interneuron" ]        
         #interneurons = [i for i in allrows if i[5]=="interneuron" ]     
-        if len(excitatory) > len(interneurons):
-            length=len(interneurons)
-        else:
-            length=len(excitatory)
-        bothtrans = [ excitatory[i] for i in xrange(0,length) if not(i>(2/3)*length) ]
-        bothtrans.extend([ interneurons[i] for i in xrange(0,length) if (i>(2/3)*length) ])
-        return bothtrans
+        #pdb.set_trace()
+
+        #if len(excitatory) > len(interneurons):
+        #    length=[0 for i in xrange(0,len(excitatory)) ]
+        #else:
+        #    length=[0 for i in xrange(0,len(interneurons)) ]
+        #bothtrans = [ excitatory[i] for i in xrange(0,length) if not(i>(2/3)*length) ]
+        #bothtrans.extend([ interneurons[i] for i in xrange(0,length) if (i>(2/3)*length) ])
+        return markram
         '''
         for i in xrange(0,length):
             #Check to see how often index is divisible by 3.
@@ -224,6 +226,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         self.cells_data = self.description.data['biophys'][0]['cells']
         bothtrans =self.prep_list()    
+        print bothtrans
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
         os.chdir(os.getcwd() + '/main')  
         self.make_cells(bothtrans)
@@ -449,6 +452,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         '''
         Allocate a synaptic cleft from exhuastive collision detection.
         '''
+        #print r,h,sec,seg,cellind,secnames,k,i,gidn
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -490,6 +494,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     assert np.sum(self.ecm)!=0
         
             h(post_syn)
+            print post_syn
             self.synapse_list.append((r,post_syn,cellind,k,gidn,i))
             syn_=h.syn_
             h.syn_.cid=i
@@ -559,7 +564,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     print left, right 
                     assert left!=right
                          
-            #test_wiring(q,s,data)
+            test_wiring(q,s,data)
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
                 k=t #such that it is not prevented from updating
@@ -606,7 +611,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         import math
                         r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                         gidn=k['gid']    
-                        r = float(r)                      
+                        r = float(r)        
+              
                         self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
 
 
@@ -683,7 +689,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 print 'checking for rx on rank ', COMM.rank
                 if len(data) != 0:
                     print 'receieved rx on rank ', COMM.rank
-                    self.post_synapse(data)
+                    #data should always be 0 on rank0
+                    if RANK!=0:
+                        self.post_synapse(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
             print('finished wiring of connectivity\n')

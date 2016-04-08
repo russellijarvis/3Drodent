@@ -40,17 +40,23 @@ if utils.COMM.rank==0:
     #
     # A global analysis of hub nodes, using global complete adjacency matrices..
     #
-    hubs.hubs()    
-   
+    (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
+    (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
+
     amplitude=0.27 #pA or nA?
     delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
     duration=400.0 #was 750 ms, however this was much too long.
 
-    hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+    hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
+    hubs.insert_cclamp(outdegree,indegree,amplitude,delay,duration)
+
     #utils.dumpjsongraph(utils.tvec,utils.gidvec)
 
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
+(outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
+(outdegree,indegree)=hubs.hubs(utils.global_ecm)    
+
 #
 # A local analysis of hub nodes, using local incomplete adjacency matrices.
 #
@@ -59,7 +65,7 @@ amplitude=0.27 #pA or nA?
 delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
 
-hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
 
 amplitude=0.27 #pA or nA?
 delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
