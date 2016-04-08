@@ -704,15 +704,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 pickle.dump(self.visited,handle)
             self.destroy_isolated_cells()
         else:
-            if COMM.rank!=0: 
-                print 'excluding rank 0 from loading cells, keeping associated RAM free for plotting'              
-                fname='synapse_list'+str(RANK)+'.p'
-                with open(fname, 'rb') as handle:
-                    self.synapse_list=pickle.load(handle)
-                    #for s in self.synapse_list:
-                    for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
-                        self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
-                self.destroy_isolated_cells()
+            #if COMM.rank!=0: 
+            #    print 'excluding rank 0 from loading cells, keeping associated RAM free for plotting'              
+            fname='synapse_list'+str(RANK)+'.p'
+            with open(fname, 'rb') as handle:
+                self.synapse_list=pickle.load(handle)
+                #for s in self.synapse_list:
+                for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
+                    self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
+            self.destroy_isolated_cells()
 
   
     def tracenet(self):
