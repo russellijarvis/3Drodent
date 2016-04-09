@@ -309,8 +309,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         global_matrix = np.zeros_like(matrix)
         COMM.Reduce([matrix, MPI.DOUBLE], [global_matrix, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-        if RANK==0:
-            assert np.sum(global_matrix)!=0
+        #if RANK==0:
+        #    assert np.sum(global_matrix)!=0
+        # The icm might be zero for example.
         return global_matrix
         
 
