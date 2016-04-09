@@ -757,28 +757,26 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return lsoftup
       
         
-    def dumpjson_graph(self,tvec,gidvec):
-        assert utils.COMM.rank==0        
+    def dumpjson_graph(self):
+        assert self.COMM.rank==0        
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        h=utils.h
-        import pickle
+        h=self.h
+        #import pickle
         #json_graph.node_link_graph
         #Create a whole network of both transmitter types.
-        utils.global_whole_net=nx.compose(utils.global_ecg, utils.global_icg)
-        
-        utils.global_whole_net.remove_nodes_from(nx.isolates(utils.global_whole_net))
-        
-        utils.global_icg.remove_nodes_from(nx.isolates(utils.global_icg))
-        utils.global_ecg.remove_nodes_from(nx.isolates(utils.global_ecg))
+        self.global_whole_net=nx.compose(self.global_ecg, self.global_icg)
+        self.global_whole_net.remove_nodes_from(nx.isolates(self.global_whole_net))
+        self.global_icg.remove_nodes_from(nx.isolates(self.global_icg))
+        self.global_ecg.remove_nodes_from(nx.isolates(self.global_ecg))
         
         d =[]
         whole=nx.to_numpy_matrix(self.global_whole_net)  
         #TODO sort whole (network) here in Python, as Python is arguably easier to understand than JS. 
         d.append(whole.tolist()) 
-        d.append(self.global_whole_net.tolist())
-        d.append(json_graph.node_link_data(self.global_whole_net))                 
+        #d.append(self.global_whole_net.tolist())
+        #d.append(json_graph.node_link_data(self.global_whole_net))                 
         d.append(self.global_namedict)
         json.dump(d, open('web/js/global_whole_network.json','w'))
         d=json.load(open('web/js/global_whole_network.json','r'))

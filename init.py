@@ -25,18 +25,21 @@ import pdb
 config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
-utils = Utils(config,NCELL=15,readin=0)
+utils = Utils(config,NCELL=15,readin=1)
 
 #info_swc=utils.gcs(utils.NCELL)
 info_swc=utils.my_decorator(utils.gcs(utils.NCELL))
+
+
 utils.wirecells()#wire cells on different hosts.
 utils.global_icm=utils.matrix_reduce(utils.icm)
 utils.global_ecm=utils.matrix_reduce(utils.ecm)
 utils.global_visited=utils.matrix_reduce(utils.visited)
 
 if utils.COMM.rank==0:    
-    utils.dumpjson_spike(tvec,gidvec)
-    http_server.load_url('web/index.html')
+    utils.dumpjson_graph()
+    #import simpleServer
+    #http_server.load_url('web/index.html')
 
         
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
@@ -72,7 +75,6 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 #
 # A local analysis of hub nodes, using local incomplete adjacency matrices.
 #
-hubs.hubs()
 amplitude=0.27 #pA or nA?
 delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
