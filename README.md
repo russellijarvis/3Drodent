@@ -1,4 +1,4 @@
-##3Drodent
+##3Drodent:
 
 A parallel algorithm for parallel distance dependant wiring of arbitrarily detailed neuron morphologies. The algorithm was made to facilitate the study of changes to dynamic network activity corresponding to neurite atrophy and growth in time varying 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
@@ -8,7 +8,7 @@ The advantages to this wiring algorithm is that all the distance dependant calcu
 In the first case it can take advantage of digital representations of 3D neurons grown using artificial growth algorithms such as NeuroMAC and [L-NEURON](http://krasnow1.gmu.edu/cn3/L-Neuron/HTM/paper.htm) 
 In the second case advances in light imaging technology are making neural network reconstruction more likely. The algorithm may take advantage of whole network reconstructions which that may be obtained in the future using light-sheet microscopy.
 
-##Requirements.
+##Requirements:
 This model needs an installation of NEURON-7.4/NEURON-7.3 configured to work with MPI and Python. Python must be able to use the NEURON module, and the NEURON module must be able to call Python.
 
 Additionally the model depends on having a subdirectory 3Drodent/main populated by neuron morphology files in the format *.swc. These files are read in to the program systematically onto each host using a serialised python list in the pickle format. These files were downloaded on mass from www.neuromorpho.org. With some thought a similar list of of swc files could be created and turned into a pickled object. Note that all files with the *.p extension are pickled files.
@@ -24,11 +24,11 @@ def pre_synapse(self):
 def post_synapse(self):
 def wirecells(self):
 ```
-##Installation Instructions 
+##Installation Instructions: 
 
-Instructions for Ubuntu-Linux are coming, this file should be updated in May 2016 a month after the release of Ubuntu Ubuntu 16.04 LTS Xenial Xerus April 2016. Note the Ubuntu instructions should be very similar to the OSX instructions, except that apt-get is used in place of macports.
+Instructions for Ubuntu-Linux are coming, this file should be updated in May 2016 a month after the release of Ubuntu Ubuntu 16.04 LTS Xenial Xerus April 2016. Note the Ubuntu instructions should be very similar to the OSX instructions, except that apt-get is used in place of macports, and the X-org and X-server is native to most Linux OS's
 
-##Instructions for OSX.
+##Instructions for OSX:
 
 This project has some strong dependencies on the NEURON module for Python, and also open-mpi, not to mention the mpi4py module for NEURON.
 
