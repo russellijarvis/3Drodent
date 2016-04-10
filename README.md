@@ -119,9 +119,17 @@ Install Quartz X11 for OSX
 Use macports/apt-get to install python27 in addition to the version of Python that ships with OSX.
 
 ```sh
-sudo pip install allensdk glob2 unittest
+sudo pip install allensdk glob2 unittest numpy scipy
 ```
-Note: This models dependency on the Allen Brain SDK is very weak and could easily be factored out.
+Note: The models dependency on the Allen Brain SDK, numba, and neuro_electro is very weak and could easily be factored out.
+
+```sh
+$git clone https://github.com/numba/numba.git
+$cd numba
+sudo python setup.py install
+
+```
+
 
 Once NEURON+Python+MPI has been successfuly built, the next step is to build the NMODL code. The NMODL code is comprised by files with the extension .mod.
 
