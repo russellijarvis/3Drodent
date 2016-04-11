@@ -25,10 +25,23 @@ import pdb
 config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
-utils = Utils(config,NCELL=40,readin=1)
-info_swc=utils.gcs(utils.NCELL)
+utils = Utils(config,NCELL=40,readin=0)
+
+#info_swc=utils.gcs(utils.NCELL)
+info_swc=utils.my_decorator(utils.gcs(utils.NCELL))
+
+
 utils.wirecells()#wire cells on different hosts.
-utils.matrix_reduce()
+utils.global_icm=utils.matrix_reduce(utils.icm)
+utils.global_ecm=utils.matrix_reduce(utils.ecm)
+utils.global_visited=utils.matrix_reduce(utils.visited)
+
+if utils.COMM.rank==0:    
+    utils.dumpjson_graph()
+    #import simpleServer
+    #http_server.load_url('web/index.html')
+
+        
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -40,16 +53,27 @@ if utils.COMM.rank==0:
     #
     # A global analysis of hub nodes, using global complete adjacency matrices..
     #
-    hubs.hubs()    
+    #Inhibitory hub
+    (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
+    #Excitatory hub
+    (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
+
     amplitude=0.27 #pA or nA?
     delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
     duration=400.0 #was 750 ms, however this was much too long.
+    #Inhibitory hub
+    hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
+    #Excitatory hub
+    hubs.insert_cclamp(outdegree,indegree,amplitude,delay,duration)
 
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
     #utils.dumpjsongraph(utils.tvec,utils.gidvec)
 
 
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
+(outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
+(outdegree,indegree)=hubs.hubs(utils.global_ecm)    
+
 #
 # A local analysis of hub nodes, using local incomplete adjacency matrices.
 #
@@ -58,7 +82,7 @@ amplitude=0.27 #pA or nA?
 delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
 
-hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
 
 amplitude=0.27 #pA or nA?
 delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
@@ -82,6 +106,7 @@ if utils.COMM.rank==0:
 if utils.COMM.rank==0:        
     import matplotlib 
     import matplotlib.pyplot as plt
+    import neo
     matplotlib.use('Agg') 
     fig = plt.figure()
     fig.clf()
@@ -99,25 +124,32 @@ if utils.COMM.rank==0:
     plt.title('traces')
     plt.grid(True)
     
-utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
+#utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
 
-def gather_spikes():
-    #tvec and gidvec are Local variable copies of utils instance variables.
-    tvec=[]#np.zeros_like(np.array(utils.tvec.to_python))
-    gidvec=[]#np.zeros_like(np.array(utils.gidvec.to_python))
-    assert type(tvec)!=type(utils.h)
-    assert type(gidvec)!=type(utils.h)
+utils.cell_info_gather()
+utils.spike_gather()
 
-    for i,j in utils.global_spike:# Unpack list of tuples
-        #create local variables.
-        tvec.extend(i)
-        gidvec.extend(j)
-    return tvec, gidvec 
+
+
+
  
 
-if utils.COMM.rank==0:        
-    tvec,gidvec=gather_spikes()
-    utils.dumpjsongraph(tvec,gidvec)
+if utils.COMM.rank==0:    
+    def collate_spikes():
+        #tvec and gidvec are Local variable copies of utils instance variables.
+        tvec=[]#np.zeros_like(np.array(utils.tvec.to_python))
+        gidvec=[]#np.zeros_like(np.array(utils.gidvec.to_python))
+        assert type(tvec)!=type(utils.h)
+        assert type(gidvec)!=type(utils.h)
+        for i,j in utils.global_spike:# Unpack list of tuples
+            tvec.extend(i)
+            gidvec.extend(j)
+        return tvec, gidvec     
+    tvec,gidvec=collate_spikes()
+    utils.dumpjson_spike(tvec,gidvec)
+    #dumpjsongraph(self,tvec,gidvec)
+        # open URL in running web browser
+    http_server.load_url('web/index.html')
 
 
 #tvec=utils.h.tvec.to_python()
@@ -137,7 +169,7 @@ def plot_raster(tvec,gidvec):
     plt.savefig('raster'+str(utils.COMM.rank)+'.png')
     
 if utils.COMM.rank==0:
-	plot_raster(tvec,gidvec)
+    plot_raster(tvec,gidvec)
     # Compute the multivariate SPIKE distance
     list_spike_trains = [ [] for i in xrange(0,int(np.max(gidvec)+1))] #define a list of lists.
     for i,j in enumerate(gidvec):

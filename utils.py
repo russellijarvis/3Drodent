@@ -24,6 +24,10 @@ import pickle
 import json
 import os
 
+#from numba import jit
+#from numpy import arange
+#@jit
+
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
@@ -46,7 +50,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         setattr(self,'global_spike',tuple)
         self.tvec=h.Vector()
         self.gidvec=h.Vector()
-
+        self.has_cells=0
         #self.readin=readin
         #self.synapse_list=[]
         self.stim = None
@@ -98,10 +102,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         of a balance between excitation and inhibition.
         '''
         allrows = pickle.load(open('allrows.p', 'rb'))
-        allrows.remove(allrows[0])#The first list element are the column titles. 
+        allrows.remove(allrows[0])#The first list element is the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
+        markram = [i for i in allrows if "Markram" in i]        
         excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        interneurons = [i for i in allrows if i[5]=="interneuron" ]     
+        interneurons = [i for i in allrows if i[5]=="interneuron" ]    
+        return markram
+    
+        '''
+
         bothtrans=[]
         if len(excitatory) > len(interneurons):
             length=len(interneurons)
@@ -109,11 +118,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             length=len(excitatory)
         for i in xrange(0,length):
             #Check to see how often index is divisible by 3.
-            if ((i%3)==0): #2/3 excitatory to reflect cortical balance of transmitters.
+            #Its this clumsy method of appending neurons to the list that means the matrices need sorting in the first place.
+            if (i>(2/3)*length): #2/3 excitatory to reflect cortical balance of transmitters.
                 bothtrans.append(interneurons[i]) 
             else:
                 bothtrans.append(excitatory[i])
-        return bothtrans
+        '''        
+        
 
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
     #them in the network.
@@ -149,28 +160,46 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         if 'dg_basket' in d:
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
-        
-                
+     
+     
+     
+    def my_decorator(self,some_function):
+        def wrapper(self):
+            h=self.h    
+            NCELL=self.NCELL
+            SIZE=self.SIZE
+            RANK=self.RANK
+            pc=h.ParallelContext()            
+            self.some_function()
+        return wrapper
+    
+    #@my_decorator
+    #makecells()#I want to pass the function makecells as a function to the decorator.
+    #So, @my_decorator is just an easier way of saying just_some_function = my_decorator(just_some_function). 
+    #It's how you apply a decorator to a function.
+
+
+            
     def make_cells(self,polarity):
         h=self.h    
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
+        pc=h.ParallelContext()
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-        pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
-        itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
+        #itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
         #Uncomment to make rank0 free of neurons.
-        #itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
+        itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
         
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
-        
         fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
         for (j,i) in itergids:
+            self.has_cells=1#RANK specific attribute simplifies later code.
             cell = h.mkcell(j)
             self.names_list[i]=j
             print cell, j,i 
@@ -189,18 +218,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 cell.basket()
                 cell.polarity=0           
       
-      
-            #cell.connect2target(None)
-            # Bug this only detected the spike on the first cell.
-            #cell.soma[0] nc =  new NetCon(&v(0.5), nil)')    
-
-            #h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')    
-            #h('nc.threshold=-10')#-10mV spike detector threshold.                    
+            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html        
             pc.set_gid2node(i,RANK)
-            h('pc.cell('+str(i)+', nc)')
-            hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            h(hocstring)
-            #pc.spike_record(i,self.tvec,self.gidvec)
             
             #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html
             #h('pc.cell('+str(i)+', nc)')
@@ -208,10 +227,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             nc = cell.connect2target(None)
             pc.cell(i, nc) # Associate the cell with this host and gid
             #### Record spikes of this cell
-            pc.spike_record(i, self.tvec, self.gidvec)
-            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            #h(hocstring)
-        
+            pc.spike_record(i, self.tvec, self.gidvec)        
             assert None!=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
@@ -220,7 +236,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     
     def gcs(self,NCELL):
-        """Instantiate NEURON cell Objects in the Python variable space, such that cell
+        """Instantiate NEURON cell Objects in the Python variable space such
         that all cells have unique identifiers."""
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -233,11 +249,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         fit_ids = self.description.data['fit_ids'][0] #excitatory        
         self.cells_data = self.description.data['biophys'][0]['cells']
         bothtrans =self.prep_list()    
+        print bothtrans
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
-        os.chdir(os.getcwd() + '/main')  
-        self.make_cells(bothtrans)
-        assert len(h.List('NetCon')) != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
-        pol=[ a.polarity for a in self.cells ]       
+        os.chdir(os.getcwd() + '/main') 
+         
+        self.my_decorator(self.make_cells(bothtrans))
+
+        #self.make_cells(bothtrans)
+        #ncsize=len(self.h.NetCon)
+
+        #assert ncsize != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
+        #Following probably not actually used anymore
+        #pol=[ a.polarity for a in self.cells ]       
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
         self.h('forall{ for(x,0){ insert xtra }}')
@@ -249,111 +272,47 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     #    for i in list():
     #        self.global_namedict.update(i)    
 
-    def spike_reduce(self):
-        self.global_spike=self.COMM.gather([self.tvec.to_python(),self.gidvec.to_python()], root=0)
+    def spike_gather(self):
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        self.global_spike=COMM.gather([self.tvec.to_python(),self.gidvec.to_python()], root=0)
+
+    def cell_info_gather(self):
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
+        self.global_namedict=COMM.gather(self.namedict, root=0)        
+        if RANK==0:
+            self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
+        ##Standard matrices that will always need to be reduced.    
+
 
 
     def matrix_reduce(self, matrix=None):
         '''
         collapse many incomplete rank specific matrices into complete global matrices on rank0.
+        This function has side effects (it mutates object arguments, although it currently has no arguments, this will become clearer after refacttoring).
         '''
         # TODO make this method argument based so it can handle arbitary input matrices not a few different particular
         # types
-        import networkx as nx
+        # TODO apply function decorator.
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        #import numpy as np
+        global_matrix = np.zeros_like(matrix)
+        COMM.Reduce([matrix, MPI.DOUBLE], [global_matrix, MPI.DOUBLE], op=MPI.SUM,
+                    root=0)
+        #if RANK==0:
+        #    assert np.sum(global_matrix)!=0
+        # The icm might be zero for example.
+        return global_matrix
+        
 
-        #dred = MPI.Op.Create(self.dreduce, commute=True)
-        #COMM.allreduce([self.namedict], op=dred)
-        #COMM.Reduce([self.namedict, MPI.DOUBLE], [self.namedict, MPI.DOUBLE], op=MPI.SUM,
-        #            root=0)                    
-        ##Argument matrix
-        if matrix!=None:
-            self.global_matrix = np.zeros_like(self.matrix)
-            COMM.Reduce([self.matrix, MPI.DOUBLE], [self.global_matrix, MPI.DOUBLE], op=MPI.SUM,
-                        root=0)
-        
-        #Create a local dictionary
-        self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
-        
-        
-        self.global_namedict=COMM.gather(self.namedict, root=0)        
-        if RANK==0:
-            self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
-        ##Standard matrices that will always need to be reduced.    
-        COMM.Barrier()
-        
-        self.names_list=np.array(self.names_list)
-        self.my_names_list=np.zeros_like(names_list)#, string), order, subok)
-        #self.my_names_list = [x for x in xrange(0,self.names_list)]#Create a global names list the same size as the local names lists.
-        COMM.Reduce([self.names_list, MPI.DOUBLE], [self.my_names_list, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-
-        
-        
-        self.global_visited = np.zeros_like(self.visited)
-        COMM.Reduce([self.visited, MPI.DOUBLE], [self.global_visited, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-
-        self.global_icm = np.zeros_like(self.icm)
-        COMM.Reduce([self.icm, MPI.DOUBLE], [self.global_icm, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.global_ecm = np.zeros_like(self.ecm)
-        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.global_ecm, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.global_icg = nx.DiGraph(self.global_icm)
-        self.global_ecg = nx.DiGraph(self.global_ecm)
-        if RANK==0:
-            assert np.sum(self.global_ecm)!=0
-        if RANK==0:
-            assert np.sum(self.global_icm)!=0
-        #TODO check if visited is empty.
-        if self.readin==0:
-            if RANK==0:
-                assert np.sum(self.global_visited)!=0
-        
-    '''    
-    def dreduce(self,counter1, counter2, datatype):
-    #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
-        for item in counter2:
-            if item in counter1:
-                counter1[item] += counter2[item]
-            else:
-                counter1[item] = counter2[item]
-        return counter1
-    
-    dreduce = MPI.Op.Create(dreduce, commute=True)
-    
-    def graph_reduce(self):
-        self.my_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
-        self.my_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
-
-        if utils.COMM.rank==0:
-            assert np.sum(self.my_ecg)!=0
-            assert np.sum(self.my_icg)!=0
-    '''        
-    '''
-    def vec_reduce(self,tvec,gidvec):      
-        assert type(tvec)==np.array
-        assert type(gidvec)==np.array
-         
-        #print type(np.array(self.idvec.to_python()))
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        COMM = self.COMM
-        RANK=self.RANK
-        COMM.Barrier()
-        self.my_tvec = np.zeros_like(self.gidvec.to_python())
-        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.my_idvec = np.zeros_like(self.tvec.to_python())
-        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0
-        )
-    '''
 
     def prun(self,tstop):
         h=self.h    
@@ -440,15 +399,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 shiplist.append(coordict)
                 self.h.pop_section()
 
-        '''                
+        '''  
+        TODO ship a numpy matrix instead of a list of coordinates, as on the receiving end 
+        using np.where may speed up calculations.              
+        
         total_matrix=np.matrix(( 3,len(shiplist) ))
         total_list=[ (x['coords'][0],x['coords'][1],x['coords'][2]) for x in shiplist ]
         for i,j in enumerate(total_list):
             print type(j)
             #pdb.set_trace()
-            total_matrix[i][0]=j[0]
-            total_matrix[i][1]=j[1]
-            total_matrix[i][2]=j[2]
+            total_matrix[i,0]=j[0]
+            total_matrix[i,1]=j[1]
+            total_matrix[i,2]=j[2]
 
         print total_array[:]
         '''
@@ -456,20 +418,20 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
-
+        '''
+        Allocate a synaptic cleft from file.
+        '''
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
         #from neuron import h
         h=self.h  
-        
         pc=h.ParallelContext()
         polarity = 0        
         polarity=int(h.Cell[int(cellind)].polarity)
         if polarity==1:
             #TODO pickle load the graphs here instead of making them manually.
-
             self.ecm[i][gidn] = self.ecm[i][gidn] + 1
             self.ecg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.ecm)!=0
@@ -496,8 +458,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
         '''
-        Allocate a synaptic cleft
+        Allocate a synaptic cleft from exhuastive collision detection.
         '''
+        #print r,h,sec,seg,cellind,secnames,k,i,gidn
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -539,6 +502,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     assert np.sum(self.ecm)!=0
         
             h(post_syn)
+            print post_syn
             self.synapse_list.append((r,post_syn,cellind,k,gidn,i))
             syn_=h.syn_
             h.syn_.cid=i
@@ -597,6 +561,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             def test_wiring(q,s,data):
                 '''
                 A test of to see if variables are updating properly.
+                The concatonation of section and segment iterables
+                will always yield a unique string, if and when the iteraterators update.
                 '''
                 if q+1<=len(s):
                     print len(s),' ',q,' ',q+1
@@ -606,7 +572,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     print left, right 
                     assert left!=right
                          
-            #test_wiring(q,s,data)
+            test_wiring(q,s,data)
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
                 k=t #such that it is not prevented from updating
@@ -653,11 +619,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         import math
                         r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                         gidn=k['gid']    
-                        r = float(r)                      
+                        r = float(r)        
+              
                         self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
 
 
-    def destroy_isolated_cells(self):        
+    def destroy_isolated_cells(self):#,cells):        
         '''
         To be called locally on every rank
         This method is intended to do two things.
@@ -708,10 +675,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
-            #for s in xrange(1, SIZE): #if rank==0, is free of neurons.
-            for s in xrange(0, SIZE):
-                print 's ', s, ' should start at 1 and increase.'
+            for s in xrange(1, SIZE): #if rank==0, is free of neurons.
+            #print 's ', s, ' should start at 1 and increase.'
             
+            #for s in xrange(0, SIZE):
+                
                 #Synchronise processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
                 #overwritting a coordictlist before it has been properly exhausted.
@@ -729,21 +697,25 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 print 'checking for rx on rank ', COMM.rank
                 if len(data) != 0:
                     print 'receieved rx on rank ', COMM.rank
-                    self.post_synapse(data)
+                    #data should always be 0 on rank0
+                    if RANK!=0:
+                        self.post_synapse(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
-
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
-            assert len(self.synapse_list)!=0
-            with open(fname, 'wb') as handle:
-                pickle.dump(self.synapse_list, handle)
-            fname='visited'+str(RANK)+'.p'
-            with open(fname, 'wb') as handle:
-                pickle.dump(self.visited,handle)
-            self.destroy_isolated_cells()
+            if COMM.rank!=0:
+                assert len(self.synapse_list)!=0
+                with open(fname, 'wb') as handle:
+                    pickle.dump(self.synapse_list, handle)
+                fname='visited'+str(RANK)+'.p'
+                with open(fname, 'wb') as handle:
+                    pickle.dump(self.visited,handle)
+                self.destroy_isolated_cells()
         else:
-            if COMM.rank!=0:               
+            if COMM.rank!=0: 
+                print 'Remember excluding rank 0 from loading cells, keeping associated RAM free for plotting'            
+                #pdb.set_trace()  
                 fname='synapse_list'+str(RANK)+'.p'
                 with open(fname, 'rb') as handle:
                     self.synapse_list=pickle.load(handle)
@@ -783,48 +755,56 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return lsoftup
       
         
-    def dumpjsongraph(utils,tvec,gidvec):
-        assert utils.COMM.rank==0        
+    def dumpjson_graph(self):
+        assert self.COMM.rank==0        
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        h=utils.h
-        import pickle
+        h=self.h
+        #import pickle
         #json_graph.node_link_graph
         #Create a whole network of both transmitter types.
-        utils.global_whole_net=nx.compose(utils.global_ecg, utils.global_icg)
-        
-        utils.global_whole_net.remove_nodes_from(nx.isolates(utils.global_whole_net))
-        utils.global_icg.remove_nodes_from(nx.isolates(utils.global_icg))
-        utils.global_ecg.remove_nodes_from(nx.isolates(utils.global_ecg))
+        self.global_whole_net=nx.compose(self.global_ecg, self.global_icg)
+        self.global_whole_net.remove_nodes_from(nx.isolates(self.global_whole_net))
+        self.global_icg.remove_nodes_from(nx.isolates(self.global_icg))
+        self.global_ecg.remove_nodes_from(nx.isolates(self.global_ecg))
         
         d =[]
-        d.append(utils.global_ecm.tolist())     
-        d.append(utils.global_icm.tolist())  
-        whole=nx.to_numpy_matrix(utils.global_whole_net)  
+        whole=nx.to_numpy_matrix(self.global_whole_net)  
+        #TODO sort whole (network) here in Python, as Python is arguably easier to understand than JS. 
         d.append(whole.tolist()) 
-        d.append(utils.global_whole_net.tolist())
-        d.append(json_graph.node_link_data(utils.global_whole_net))                 
-        d.append(json_graph.node_link_data(utils.global_whole_net))#, directed, multigraph, attrs)
-        d.append(json_graph.node_link_data(utils.global_ecg))     
-        d.append(json_graph.node_link_data(utils.global_icg))     
-        d.append(utils.global_namedict)
-        if type(tvec)!=type(utils.h):
-            if type(gidvec)!=type(utils.h):
-                d.append(tvec)
-                d.append(gidvec)
-    
+        #d.append(self.global_whole_net.tolist())
+        #d.append(json_graph.node_link_data(self.global_whole_net))                 
+        d.append(self.global_namedict)
         json.dump(d, open('web/js/global_whole_network.json','w'))
         d=json.load(open('web/js/global_whole_network.json','r'))
-    #    pickle.dump(d,open('list_of_pickle.p'),'w')
+        #read the object just to prove that is readable.
+        d=None #destroy the object.    
+        print('Wrote JSON data to web/js/network.json')
     
         print('Wrote node-link JSON data to web/js/network.json')
     dumpjsongraph(utils,tvec,gidvec)
         # open URL in running web browser
         #http_server.load_url('force/force.html')
 
-
-        
+    def dumpjson_spike(self,tvec,gidvec):
+        assert utils.COMM.rank==0        
+        import json
+        import networkx as nx
+        from networkx.readwrite import json_graph
+        h=utils.h    
+        d =[]
+        d.append(self.global_namedict)
+        assert (type(tvec)!=type(utils.h) and type(gidvec)!=type(utils.h))
+        d.append(tvec)
+        d.append(gidvec)
+        json.dump(d, open('web/js/spike.json','w'))
+        d=json.load(open('web/js/spike.json','r'))
+        #read the object just to prove that is readable.
+        d=None #explicitly destroy the object, as garbage collection would do anyway.   
+        print('Wrote JSON data to web/js/network.json')
+    
+   
 
     def generate_morphology(self, cell, morph_filename):
         '''
