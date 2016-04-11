@@ -106,7 +106,6 @@ if utils.COMM.rank==0:
 if utils.COMM.rank==0:        
     import matplotlib 
     import matplotlib.pyplot as plt
-    import neo
     matplotlib.use('Agg') 
     fig = plt.figure()
     fig.clf()

@@ -209,21 +209,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #excitatory neuron.
             self.test_cell(d[i])
             if 'pyramid' in d[i]:                
-                #self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.pyr()
                 cell.polarity=1                        
             #inhibitory neuron.
             else:                              
-                #self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.basket()
                 cell.polarity=0           
-      
             #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html        
             pc.set_gid2node(i,RANK)
-            
-            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html
-            #h('pc.cell('+str(i)+', nc)')
-            
             nc = cell.connect2target(None)
             pc.cell(i, nc) # Associate the cell with this host and gid
             #### Record spikes of this cell
@@ -399,18 +392,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 shiplist.append(coordict)
                 self.h.pop_section()
 
-        '''  
-        TODO ship a numpy matrix instead of a list of coordinates, as on the receiving end 
-        using np.where may speed up calculations.              
-        
+        '''                
         total_matrix=np.matrix(( 3,len(shiplist) ))
         total_list=[ (x['coords'][0],x['coords'][1],x['coords'][2]) for x in shiplist ]
         for i,j in enumerate(total_list):
             print type(j)
             #pdb.set_trace()
-            total_matrix[i,0]=j[0]
-            total_matrix[i,1]=j[1]
-            total_matrix[i,2]=j[2]
+            total_matrix[i][0]=j[0]
+            total_matrix[i][1]=j[1]
+            total_matrix[i][2]=j[2]
 
         print total_array[:]
         '''
@@ -418,9 +408,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return shiplist
         
     def alloc_synapse_ff(self,r,post_syn,cellind,k,gidn,i):
-        '''
-        Allocate a synaptic cleft from file.
-        '''
+
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -440,7 +428,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             self.icg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.icm)!=0                
             #TODO Add other edge attributes like secnames etc.
-        #pdb.set_trace()
         print post_syn
         h('objref syn_')   
         h(post_syn)
@@ -460,7 +447,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         '''
         Allocate a synaptic cleft from exhuastive collision detection.
         '''
-        #print r,h,sec,seg,cellind,secnames,k,i,gidn
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
@@ -484,6 +470,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
             else:
                 if (k['gid']%2==0):
+                    #TODO Find standard open source brain affiliated code for NMDA synapse
                     post_syn = secnames + ' ' + 'syn_ = new AmpaNmda(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
@@ -619,12 +606,11 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                         import math
                         r=math.sqrt((h.coords2.x[0] - coordsx)**2+(h.coords2.x[1] - coordsy)**2+(h.coords2.x[2] - coordsz)**2)
                         gidn=k['gid']    
-                        r = float(r)        
-              
+                        r = float(r)                      
                         self.alloc_synapse(r,h,sec,seg,cellind,secnames,k,i,gidn)
 
 
-    def destroy_isolated_cells(self):#,cells):        
+    def destroy_isolated_cells(self):        
         '''
         To be called locally on every rank
         This method is intended to do two things.
@@ -649,7 +635,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pass
         #TODO hoc object level code that destroys the cell object.
         #    cell=pc.gid2cell(i)
-        #    h('py.cell = New List()')
+             
+        #    h('objref cell')
             
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
@@ -697,25 +684,20 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 print 'checking for rx on rank ', COMM.rank
                 if len(data) != 0:
                     print 'receieved rx on rank ', COMM.rank
-                    #data should always be 0 on rank0
-                    if RANK!=0:
-                        self.post_synapse(data)
+                    self.post_synapse(data)
                     print 'using received message on rank ', COMM.rank
                     print len(data)
             print('finished wiring of connectivity\n')
             fname='synapse_list'+str(RANK)+'.p'
-            if COMM.rank!=0:
-                assert len(self.synapse_list)!=0
-                with open(fname, 'wb') as handle:
-                    pickle.dump(self.synapse_list, handle)
-                fname='visited'+str(RANK)+'.p'
-                with open(fname, 'wb') as handle:
-                    pickle.dump(self.visited,handle)
-                self.destroy_isolated_cells()
+            assert len(self.synapse_list)!=0
+            with open(fname, 'wb') as handle:
+                pickle.dump(self.synapse_list, handle)
+            fname='visited'+str(RANK)+'.p'
+            with open(fname, 'wb') as handle:
+                pickle.dump(self.visited,handle)
+            self.destroy_isolated_cells()
         else:
-            if COMM.rank!=0: 
-                print 'Remember excluding rank 0 from loading cells, keeping associated RAM free for plotting'            
-                #pdb.set_trace()  
+            if COMM.rank!=0:               
                 fname='synapse_list'+str(RANK)+'.p'
                 with open(fname, 'rb') as handle:
                     self.synapse_list=pickle.load(handle)
@@ -900,7 +882,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-
         for cell in self.cells:
             self.h.pc.spike_record(int(cell.gid1), self.h.tvec, self.h.idvec)
 
