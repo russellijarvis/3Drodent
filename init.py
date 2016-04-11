@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Sep  8 17:01:22 2015
-
 The parallel wiring related functions are written by Russell Jarvis rjjarvis@asu.edu
 """
 import allensdk
 from allensdk.api.queries.biophysical_perisomatic_api import \
     BiophysicalPerisomaticApi
-
 from allensdk.api.queries.cell_types_api import CellTypesApi
 import allensdk.core.swc as swc
 import os
@@ -26,22 +24,16 @@ config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
 utils = Utils(config,NCELL=40,readin=0)
-
 #info_swc=utils.gcs(utils.NCELL)
 info_swc=utils.my_decorator(utils.gcs(utils.NCELL))
-
-
 utils.wirecells()#wire cells on different hosts.
 utils.global_icm=utils.matrix_reduce(utils.icm)
 utils.global_ecm=utils.matrix_reduce(utils.ecm)
 utils.global_visited=utils.matrix_reduce(utils.visited)
-
 if utils.COMM.rank==0:    
     utils.dumpjson_graph()
     #import simpleServer
-    #http_server.load_url('web/index.html')
-
-        
+    #http_server.load_url('web/index.html')      
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
@@ -50,14 +42,11 @@ if utils.COMM.rank==0:
     #utils.plotgraph()
     hubs.save_matrix()
     #if utils.COMM.rank==0:
-    #
-    # A global analysis of hub nodes, using global complete adjacency matrices..
-    #
+    # A global analysis of hub nodes, using global complete adjacency matrices.
     #Inhibitory hub
     (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
     #Excitatory hub
     (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
-
     amplitude=0.27 #pA or nA?
     delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
     duration=400.0 #was 750 ms, however this was much too long.
@@ -65,44 +54,30 @@ if utils.COMM.rank==0:
     hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
     #Excitatory hub
     hubs.insert_cclamp(outdegree,indegree,amplitude,delay,duration)
-
     hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
     #utils.dumpjsongraph(utils.tvec,utils.gidvec)
-
-
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
 (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
-
-#
 # A local analysis of hub nodes, using local incomplete adjacency matrices.
-#
 hubs.hubs()
 amplitude=0.27 #pA or nA?
 delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
-
 hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
-
 amplitude=0.27 #pA or nA?
 delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
-
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-
-
 vec = utils.record_values()
 print 'setup recording'
 tstop = 1570
 utils.COMM.barrier()
 utils.prun(tstop)
-
 utils.global_vec = utils.COMM.gather(vec,root=0) # Results in a list of dictionaries on rank 0 called utils.global_vec
 # Convert the list of dictionaries into one big dictionary called global_vec (type conversion).
 if utils.COMM.rank==0:
     utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
-
-
 if utils.COMM.rank==0:        
     import matplotlib 
     import matplotlib.pyplot as plt
@@ -124,15 +99,8 @@ if utils.COMM.rank==0:
     plt.grid(True)
     
 #utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
-
 utils.cell_info_gather()
 utils.spike_gather()
-
-
-
-
- 
-
 if utils.COMM.rank==0:    
     def collate_spikes():
         #tvec and gidvec are Local variable copies of utils instance variables.
@@ -150,11 +118,6 @@ if utils.COMM.rank==0:
         # open URL in running web browser
     http_server.load_url('web/index.html')
 
-
-#tvec=utils.h.tvec.to_python()
-#gidvec=utils.h.gidvec.to_python()
-#print type(tvec)
-#print type(gidvec)
 def plot_raster(tvec,gidvec):
     pallete=[[0.42,0.67,0.84],[0.50,0.80,1.00],[0.90,0.32,0.00],[0.34,0.67,0.67],[0.42,0.82,0.83],[0.90,0.59,0.00], 
                 [0.33,0.67,0.47],[0.42,0.83,0.59],[0.90,0.76,0.00],[1.00,0.85,0.00],[0.71,0.82,0.41],[0.57,0.67,0.33]]
@@ -197,15 +160,3 @@ if utils.COMM.rank==0:
 #import http_server as hs
 #hs.load_url('force.json')
 
-'''
-
-def mkjson(): #Only ascii as in dictionary contents
-    from allensdk.core.json_utilities import write
-
-    #can be serialised into dictionary contents.
-    for m in morphs:
-        write(str(m)+'.json',m.root)
-    return 0
-
-
-'''

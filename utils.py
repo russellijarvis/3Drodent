@@ -108,61 +108,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         excitatory = [i for i in allrows if i[5]!="interneuron" ]        
         interneurons = [i for i in allrows if i[5]=="interneuron" ]    
         return markram
-    
-        '''
 
-        bothtrans=[]
-        if len(excitatory) > len(interneurons):
-            length=len(interneurons)
-        else:
-            length=len(excitatory)
-        for i in xrange(0,length):
-            #Check to see how often index is divisible by 3.
-            #Its this clumsy method of appending neurons to the list that means the matrices need sorting in the first place.
-            if (i>(2/3)*length): #2/3 excitatory to reflect cortical balance of transmitters.
-                bothtrans.append(interneurons[i]) 
-            else:
-                bothtrans.append(excitatory[i])
-        '''        
-        
-
-    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
-    #them in the network.
-    #Call a method test_cell inside the make_cells function.
-    def test_cell(self,d):#celltype='hip_pyr'):
-        from neuronunit.neuroelectro import NeuroElectroSummary
-        from neuronunit import neuroelectro
-        x = neuroelectro.NeuroElectroDataMap()
-        if 'hippocampus' in d:
-            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
-                                        ephysprop={'name':'spike width'})
-            observation = summary.get_observation(show=True)
-            #from neuronunit.tests import SpikeWidthTest
-            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
-            #Does not work due to problem with elephant.
-            #Note elephant requires pre-release version of neo.
-            pass
-        if 'neocortex' in d:
-  
-            x.set_neuron(nlex_id='sao2128417084')
-            #pass
-            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
-                                           # nucleus pyramidal neuron'.
-            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
-            #TODO find neurolex.org ID for Vm 
-            pass
-            #x.get_values() # Gets values for spike width from this paper. 
-            #pdb.set_trace() 
-            #width = x.val # Spike width reported in that paper. 
-        if 'basket' in d:
-            x.set_neuron(nlex_id='nifext_56')
-            pass
-        if 'dg_basket' in d:
-            x.set_neuron(nlex_id='nlx_cell_100201')
-            pass
-     
-     
-     
     def my_decorator(self,some_function):
         def wrapper(self):
             h=self.h    
@@ -176,9 +122,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     #@my_decorator
     #makecells()#I want to pass the function makecells as a function to the decorator.
     #So, @my_decorator is just an easier way of saying just_some_function = my_decorator(just_some_function). 
-    #It's how you apply a decorator to a function.
-
-
+    #It's how you apply a decorator to a function
             
     def make_cells(self,polarity):
         h=self.h    
@@ -923,6 +867,60 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             pass
         
             '''    
+             '''
+
+        bothtrans=[]
+        if len(excitatory) > len(interneurons):
+            length=len(interneurons)
+        else:
+            length=len(excitatory)
+        for i in xrange(0,length):
+            #Check to see how often index is divisible by 3.
+            #Its this clumsy method of appending neurons to the list that means the matrices need sorting in the first place.
+            if (i>(2/3)*length): #2/3 excitatory to reflect cortical balance of transmitters.
+                bothtrans.append(interneurons[i]) 
+            else:
+                bothtrans.append(excitatory[i])
+        '''        
+        
+
+    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
+    #them in the network.
+    #Call a method test_cell inside the make_cells function.
+    def test_cell(self,d):#celltype='hip_pyr'):
+        from neuronunit.neuroelectro import NeuroElectroSummary
+        from neuronunit import neuroelectro
+        x = neuroelectro.NeuroElectroDataMap()
+        if 'hippocampus' in d:
+            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
+                                        ephysprop={'name':'spike width'})
+            observation = summary.get_observation(show=True)
+            #from neuronunit.tests import SpikeWidthTest
+            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+            #Does not work due to problem with elephant.
+            #Note elephant requires pre-release version of neo.
+            pass
+        if 'neocortex' in d:
+  
+            x.set_neuron(nlex_id='sao2128417084')
+            #pass
+            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                           # nucleus pyramidal neuron'.
+            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+            #TODO find neurolex.org ID for Vm 
+            pass
+            #x.get_values() # Gets values for spike width from this paper. 
+            #pdb.set_trace() 
+            #width = x.val # Spike width reported in that paper. 
+        if 'basket' in d:
+            x.set_neuron(nlex_id='nifext_56')
+            pass
+        if 'dg_basket' in d:
+            x.set_neuron(nlex_id='nlx_cell_100201')
+            pass
+       
+            
+            
     def dreduce(self,counter1, counter2, datatype):
     #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
         for item in counter2:
