@@ -68,9 +68,10 @@ class NetStructure():
             self.setup_iclamp_step(self.celldict[int(indegree)], amplitude,delay,duration)#0.27, 1020.0, 750.0)  
         
     def save_matrix(self):    
+        #save and plot matrix.
         SIZE=self.SIZE
         RANK=self.RANK
-
+        #TODO replace with plotly.
         import matplotlib 
         matplotlib.use('Agg') 
         import matplotlib.pyplot as plt

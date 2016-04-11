@@ -29,33 +29,29 @@ body {
 
 <body>  
      <div id=tooltip></div>
-        <div style="color:#0000FF">
-            <a href="raster.html">
+      <div style="color:#0000FF">
+        <a href="raster.html">
              A raster plot of spikes output from a current injection stimulated network.
-            </a>
-        </div>
-        <!--
-        <div>
-            <a href="spike distance.html">
-             A plot of spike distances.
-            </a>
-        </div>
-        -->
-        <div style="color:#0000FF">
+        </a>
+        
+        <a href="spike distance.html">
+             A plot of spikes distance.
+        </a>
+    </div>
+  
+    <div style="color:#0000FF">
         <a href="force.html">
              A force directed layout of the network topology.
         </a>
-        
-        </div>
-       
-        <div>
-            <a href="http://russelljjarvis.github.io/3Drodent/web">
-                View Source Code 1
-            </a>
-        </div>
+    </div>
     <div style="color:#0000FF">
 
+<!--Offline --> 
+<script type="text/javascript" src="d3.v3.min.js"></script> 
+<!--
+Online 
 <script src="//d3js.org/d3.v3.min.js"></script>
+-->
 
 <script>
 
@@ -72,9 +68,8 @@ var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box tha
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
 	/*
-    Written by Dulini Mendis
-    https://github.com/DuliniMendis/RodentTest/blob/gh-pages/index.html
-	with unnecessary comments by Russell Jarvis
+	Written by Dulini Mendis
+	With comments by Russell Jarvis
 	*/
     var matrix=data[2]; /* adjacency matrix 37 x 37 of all excitatory and inhibitory neurons, although the size of the adjacency
     matrix is liable to change with different simulations
