@@ -6,7 +6,7 @@ The advantages to this wiring algorithm is that all the distance dependant calcu
 
 ##Results
 View results after they have been commited to the gh-pages branch or in a similar file on your forked repository
-russelljjarvis.github.com/3Drodent/web/index.html
+[Results](russelljjarvis.github.com/3Drodent/web/index.html)
 
 ##This program has two use cases:
 In the first case it can take advantage of digital representations of 3D neurons grown using artificial growth algorithms such as NeuroMAC and [L-NEURON](http://krasnow1.gmu.edu/cn3/L-Neuron/HTM/paper.htm) 
