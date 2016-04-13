@@ -4,9 +4,9 @@ A parallel algorithm for distance dependant wiring of arbitrarily detailed neuro
 
 The advantages to this wiring algorithm is that all the distance dependant calculations occur inside the Python-HOC frame work. No additional programs are run, and only one configuration file needs to be set. The network size (the number of neurons) and the number of CPUs used to execute code is flexible.
 
-##Results
-View results after they have been commited to the gh-pages branch or in a similar file on your forked repository
-[Results](russelljjarvis.github.com/3Drodent/web/index.html)
+##[Results](russelljjarvis.github.com/3Drodent/web/index.html)
+View results after they have been commited to the gh-pages branch or in a similar file on your forked repository.
+
 
 ##This program has two use cases:
 In the first case it can take advantage of digital representations of 3D neurons grown using artificial growth algorithms such as NeuroMAC and [L-NEURON](http://krasnow1.gmu.edu/cn3/L-Neuron/HTM/paper.htm) 
