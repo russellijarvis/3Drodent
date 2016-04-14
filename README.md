@@ -1,6 +1,6 @@
 ##3Drodent:
 
-A parallel algorithm for distance dependant wiring of arbitrarily detailed neuron morphologies. The algorithm facilitates the study of changes to dynamic network activity corresponding to neurite atrophy and growth in 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
+A parallel algorithm for distance dependent wiring of arbitrarily detailed neuron morphologies. The algorithm facilitates the study of changes to dynamic network activity corresponding to neurite atrophy and growth in 3D neural networks. This model has been implemented as an extension of the Allen Brain SDK Utils class.
 
 The advantages to this wiring algorithm is that all the distance dependant calculations occur inside the Python-HOC frame work. No additional programs are run, and only one configuration file needs to be set. The network size (the number of neurons) and the number of CPUs used to execute code is flexible.
 
