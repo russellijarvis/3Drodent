@@ -103,7 +103,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         '''
         cil = pickle.load(open('cellinfolist.p', 'rb'))
         cil.remove(cil[0])#The first list element is the column titles.
-        #cil = [ lambda i,i[5] : if i[5]!="interneuron" i ]
+        #inhibitory = map(lambda cil : cil if i[5]!="interneuron", i)
         cil = [i for i in cil if int(len(i))>9 ]
         markram = [i for i in cil if "Markram" in i]        
         excitatory = [i for i in cil if i[5]!="interneuron" ]        
