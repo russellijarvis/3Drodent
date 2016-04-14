@@ -101,17 +101,18 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         however this is not practical for debugging small models, composed
         of a balance between excitation and inhibition.
         '''
-        allrows = pickle.load(open('allrows.p', 'rb'))
-        allrows.remove(allrows[0])#The first list element is the column titles. 
-        allrows = [i for i in allrows if int(len(i))>9 ]
-        markram = [i for i in allrows if "Markram" in i]        
-        excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        interneurons = [i for i in allrows if i[5]=="interneuron" ]    
+        cil = pickle.load(open('cellinfolist.p', 'rb'))
+        cil.remove(cil[0])#The first list element is the column titles.
+        #cil = [ lambda i,i[5] : if i[5]!="interneuron" i ]
+        cil = [i for i in cil if int(len(i))>9 ]
+        markram = [i for i in cil if "Markram" in i]        
+        excitatory = [i for i in cil if i[5]!="interneuron" ]        
+        interneurons = [i for i in cil if i[5]=="interneuron" ]    
         return markram
     
         
-        #excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        #interneurons = [i for i in allrows if i[5]=="interneuron" ]     
+        #excitatory = [i for i in cil if i[5]!="interneuron" ]        
+        #interneurons = [i for i in cil if i[5]=="interneuron" ]     
         #pdb.set_trace()
 
         #if len(excitatory) > len(interneurons):
