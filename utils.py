@@ -104,8 +104,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         cil.remove(cil[0])#The first list element is the column titles.
         #inhibitory = map(lambda cil : cil if i[5]!="interneuron", i)
         cil = [i for i in cil if int(len(i))>9 ]
-        markram = [i for i in cil if "Markram" in i]        
-        	return markram
+        markram = [i for i in cil if "Markram" in i]
+        
+        #for m in markram:
+        #    execute_string='mv main/'+m[len(m)-2]+' swcfolder'
+        #    print execute_string
+        #    os.system(execute_string)        
+        
+    	return markram
     
     def both_trans(self,markram):
         '''
@@ -194,7 +200,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.cells_data = self.description.data['biophys'][0]['cells']
         bothtrans=self.both_trans(self.prep_list())   
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
-        os.chdir(os.getcwd() + '/main') 
+        os.chdir(os.getcwd() + '/swcfolder') 
         self.make_cells(bothtrans)
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
@@ -223,7 +229,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     def matrix_reduce(self, matrix=None):
         '''
         collapse many incomplete rank specific matrices into complete global matrices on rank0.
-        This function has side effects (it mutates object arguments, although it currently has no arguments, this will become clearer after refacttoring).
         '''
         # TODO make this method argument based so it can handle arbitary input matrices not a few different particular
         # types
@@ -351,7 +356,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
-        #from neuron import h
         h=self.h  
         pc=h.ParallelContext()
         polarity = 0        
@@ -383,7 +387,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
         '''
-        Allocate a synaptic cleft from exhuastive collision detection.
+        Allocate a synaptic cleft from exhaustive collision detection.
         '''
         NCELL=self.NCELL
         SIZE=self.SIZE
