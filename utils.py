@@ -95,8 +95,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     def prep_list(self):                    
         '''
         find which list has the shortest length.
-        and construct a new list with 1 in 3 inhibitory neurons and 2 out of 3 
-         excitatory neurons. 
+        and construct a new list with 1 in 3 inhibitory neurons and 2 out of 3 excitatory neurons. 
         It would be preferable to make an exhaustive list of all neurons
         however this is not practical for debugging small models, composed
         of a balance between excitation and inhibition.
@@ -105,10 +104,17 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         allrows.remove(allrows[0])#The first list element is the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
         markram = [i for i in allrows if "Markram" in i]        
-        excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        interneurons = [i for i in allrows if i[5]=="interneuron" ]    
         return markram
-
+    
+    def both_trans(self,markram):
+        '''
+        Make sure that the network is composed of 2/3 excitatory neurons 1/3 inhibitory neurons.
+        '''
+        bothtrans=[]                                                                      
+        bothtrans=[i for j,i in enumerate(markram) if "interneuron" in i if j<(self.NCELL/3)]
+        bothtrans.extend([i for j,i in enumerate(markram) if not "interneuron" in i if j>=(self.NCELL/3)])        
+        return bothtrans
+ 
     def my_decorator(self,some_function):
         def wrapper(self):
             h=self.h    
@@ -125,6 +131,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     #It's how you apply a decorator to a function
             
     def make_cells(self,polarity):
+        #Distribute cells across the hosts in a
+        #Round robin distribution (circular dealing of cells)
+        #https://en.wikipedia.org/wiki/Round-robin
+  
         h=self.h    
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -134,9 +144,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
         d = { x: y for x,y in enumerate(polarity)} 
-        #itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
-        #Uncomment to make rank0 free of neurons.
-        itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
+        itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )
         
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
@@ -159,6 +167,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             else:                              
                 cell.basket()
                 cell.polarity=0           
+            #8 lines of trailing code is drawn from.
             #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html        
             pc.set_gid2node(i,RANK)
             nc = cell.connect2target(None)
@@ -168,9 +177,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             assert None!=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
-    
-    
-
     
     def gcs(self,NCELL):
         """Instantiate NEURON cell Objects in the Python variable space such
@@ -183,21 +189,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref nc, cells')
         swcdict={}
         NFILE = 3175
-        fit_ids = self.description.data['fit_ids'][0] #excitatory        
+        fit_ids = self.description.data['fit_ids'][0]        
         self.cells_data = self.description.data['biophys'][0]['cells']
-        bothtrans =self.prep_list()    
-        print bothtrans
+        bothtrans=self.both_trans(self.prep_list())   
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
         os.chdir(os.getcwd() + '/main') 
-         
-        self.my_decorator(self.make_cells(bothtrans))
-
-        #self.make_cells(bothtrans)
-        #ncsize=len(self.h.NetCon)
-
-        #assert ncsize != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
-        #Following probably not actually used anymore
-        #pol=[ a.polarity for a in self.cells ]       
+        self.make_cells(bothtrans)
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
         self.h('forall{ for(x,0){ insert xtra }}')
@@ -205,10 +202,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
     
-    #def dreduce(self,list):
-    #    for i in list():
-    #        self.global_namedict.update(i)    
-
     def spike_gather(self):
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -225,10 +218,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.global_namedict=COMM.gather(self.namedict, root=0)        
         if RANK==0:
             self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
-        ##Standard matrices that will always need to be reduced.    
-
-
-
+    
     def matrix_reduce(self, matrix=None):
         '''
         collapse many incomplete rank specific matrices into complete global matrices on rank0.
@@ -249,8 +239,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         # The icm might be zero for example.
         return global_matrix
         
-
-
     def prun(self,tstop):
         h=self.h    
         pc=h.ParallelContext()
@@ -606,10 +594,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Iterate over all CPU ranks, iterate through all GIDs (global 
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
-            for s in xrange(1, SIZE): #if rank==0, is free of neurons.
+            #for s in xrange(1, SIZE): #if rank==0, is free of neurons.
             #print 's ', s, ' should start at 1 and increase.'
             
-            #for s in xrange(0, SIZE):
+            for s in xrange(0, SIZE):
                 
                 #Synchronise processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
@@ -641,14 +629,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 pickle.dump(self.visited,handle)
             self.destroy_isolated_cells()
         else:
-            if COMM.rank!=0:               
-                fname='synapse_list'+str(RANK)+'.p'
-                with open(fname, 'rb') as handle:
-                    self.synapse_list=pickle.load(handle)
-                    #for s in self.synapse_list:
-                    for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
-                        self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
-                self.destroy_isolated_cells()
+            #if COMM.rank!=0:               
+            fname='synapse_list'+str(RANK)+'.p'
+            with open(fname, 'rb') as handle:
+                self.synapse_list=pickle.load(handle)
+                #for s in self.synapse_list:
+                for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
+                    self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
+            self.destroy_isolated_cells()
 
   
     def tracenet(self):
@@ -865,21 +853,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
         
-        '''    
-
-        bothtrans=[]
-        if len(excitatory) > len(interneurons):
-            length=len(interneurons)
-        else:
-            length=len(excitatory)
-        for i in xrange(0,length):
-            #Check to see how often index is divisible by 3.
-            #Its this clumsy method of appending neurons to the list that means the matrices need sorting in the first place.
-            if (i>(2/3)*length): #2/3 excitatory to reflect cortical balance of transmitters.
-                bothtrans.append(interneurons[i]) 
-            else:
-                bothtrans.append(excitatory[i])
-        '''        
+        
         
 
     #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
