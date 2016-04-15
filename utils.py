@@ -709,7 +709,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         print('Wrote JSON data to web/js/network.json')
     
         print('Wrote node-link JSON data to web/js/network.json')
-    dumpjsongraph(utils,tvec,gidvec)
         # open URL in running web browser
         #http_server.load_url('force/force.html')
 
@@ -866,8 +865,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
         
-            '''    
-             '''
+        '''    
 
         bothtrans=[]
         if len(excitatory) > len(interneurons):
@@ -920,45 +918,3 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             pass
        
             
-            
-    def dreduce(self,counter1, counter2, datatype):
-    #file:///Users/kappa/Desktop/dictionary%20-%20Summing%20Python%20Objects%20with%20MPI's%20Allreduce%20-%20Stack%20Overflow.webarchive
-        for item in counter2:
-            if item in counter1:
-                counter1[item] += counter2[item]
-            else:
-                counter1[item] = counter2[item]
-        return counter1
-    
-    dreduce = MPI.Op.Create(dreduce, commute=True)
-    
-    def graph_reduce(self):
-        self.my_ecg = self.COMM.allreduce(self.ecg, op=self.dreduce)    
-        self.my_icg = self.COMM.allreduce(self.icg, op=self.dreduce)    
-
-        if utils.COMM.rank==0:
-            assert np.sum(self.my_ecg)!=0
-            assert np.sum(self.my_icg)!=0
-    '''        
-    '''
-    def vec_reduce(self,tvec,gidvec):      
-        assert type(tvec)==np.array
-        assert type(gidvec)==np.array
-         
-        #print type(np.array(self.idvec.to_python()))
-        NCELL=self.NCELL
-        SIZE=self.SIZE
-        COMM = self.COMM
-        RANK=self.RANK
-        COMM.Barrier()
-        self.my_tvec = np.zeros_like(self.gidvec.to_python())
-        COMM.Reduce([np.array(self.tvec.to_python()), MPI.DOUBLE], [self.my_tvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.my_idvec = np.zeros_like(self.tvec.to_python())
-        COMM.Reduce([np.array(self.idvec.to_python()), MPI.DOUBLE], [self.my_idvec, MPI.DOUBLE], op=MPI.SUM,
-                    root=0
-        )
-    '''
-
-
-
