@@ -23,25 +23,20 @@ import pdb
 config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
-utils = Utils(config,NCELL=40,readin=0)
-#info_swc=utils.gcs(utils.NCELL)
-info_swc=utils.my_decorator(utils.gcs(utils.NCELL))
+utils = Utils(config,NCELL=60,readin=0)
+info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
 utils.global_icm=utils.matrix_reduce(utils.icm)
 utils.global_ecm=utils.matrix_reduce(utils.ecm)
 utils.global_visited=utils.matrix_reduce(utils.visited)
 if utils.COMM.rank==0:    
     utils.dumpjson_graph()
-    #import simpleServer
-    #http_server.load_url('web/index.html')      
 utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 from rigp import NetStructure
 if utils.COMM.rank==0:
     hubs=NetStructure(utils,utils.global_ecm,utils.global_icm,utils.visited,utils.celldict)
     print 'experimental rig'
-    #utils.plotgraph()
     hubs.save_matrix()
-    #if utils.COMM.rank==0:
     # A global analysis of hub nodes, using global complete adjacency matrices.
     #Inhibitory hub
     (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
@@ -59,7 +54,6 @@ hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
 (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
 # A local analysis of hub nodes, using local incomplete adjacency matrices.
-hubs.hubs()
 amplitude=0.27 #pA or nA?
 delay=15# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
@@ -77,7 +71,6 @@ utils.global_vec = utils.COMM.gather(vec,root=0) # Results in a list of dictiona
 # Convert the list of dictionaries into one big dictionary called global_vec (type conversion).
 if utils.COMM.rank==0:
     utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
-if utils.COMM.rank==0:        
     import matplotlib 
     import matplotlib.pyplot as plt
     matplotlib.use('Agg') 
@@ -86,9 +79,7 @@ if utils.COMM.rank==0:
     plt.hold(True) #seems to be unecessary function call.
     #TODO outsource management of membrane traces to neo/elephant.
     #TODO use allreduce to reduce python dictionary to rank0
-    #This is different to Allreduce.
     for gid,v in utils.global_vec['v'].iteritems():
-        #print v.to_python()
         plt.plot(utils.global_vec['t'].to_python(),v.to_python())
     fig.savefig('membrane_traces_from_all_ranks'+str(utils.COMM.rank)+'.png')    
     plt.hold(False) #seems to be unecessary function call.
@@ -97,14 +88,13 @@ if utils.COMM.rank==0:
     plt.title('traces')
     plt.grid(True)
     
-#utils.spike_reduce() #Call matrix_reduce again in order to evaluate global_spike
 utils.cell_info_gather()
 utils.spike_gather()
 if utils.COMM.rank==0:    
     def collate_spikes():
         #tvec and gidvec are Local variable copies of utils instance variables.
-        tvec=[]#np.zeros_like(np.array(utils.tvec.to_python))
-        gidvec=[]#np.zeros_like(np.array(utils.gidvec.to_python))
+        tvec=[]
+        gidvec=[]
         assert type(tvec)!=type(utils.h)
         assert type(gidvec)!=type(utils.h)
         for i,j in utils.global_spike:# Unpack list of tuples
