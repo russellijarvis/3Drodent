@@ -23,16 +23,31 @@ import pdb
 config = Config().load('config.json')
 # The readin flag when set enables the wiring to be read in from pre-existing 
 # pickled files with rank specific file names.
+from mpi4py import MPI
+
+MPI.COMM = MPI.COMM_WORLD
 utils = Utils(config,NCELL=60,readin=0)
-info_swc=utils.gcs(utils.NCELL)
+
+print MPI.COMM.Get_rank(), 'mpi rank'
+if MPI.COMM.Get_rank()==0:
+    pass
+else:
+    info_swc=utils.gcs(utils.NCELL)
 utils.wirecells()#wire cells on different hosts.
+#utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
+
+#reassign the rank of each processor and the size of the pool of available CPUs, to reflect the fact that rank0 is again free participating in local computations.
+#utils.RANK=MPI.COMM.Get_rank()
+#utils.SIZE=MPI.COMM.Get_size()
 utils.global_icm=utils.matrix_reduce(utils.icm)
 utils.global_ecm=utils.matrix_reduce(utils.ecm)
 utils.global_visited=utils.matrix_reduce(utils.visited)
-if utils.COMM.rank==0:    
+if utils.COMM.rank==0:
     utils.dumpjson_graph()
-utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
-from rigp import NetStructure
+    from rigp import NetStructure
+else:
+    utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them.     
+
 if utils.COMM.rank==0:
     hubs=NetStructure(utils,utils.global_ecm,utils.global_icm,utils.visited,utils.celldict)
     print 'experimental rig'

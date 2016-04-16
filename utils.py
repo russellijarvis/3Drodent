@@ -66,8 +66,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         setattr(self,'name_list',[])
         #self.celldict={}
         self.COMM = MPI.COMM_WORLD
-        self.SIZE = self.COMM.Get_size()
-        self.RANK = self.COMM.Get_rank()
+        #self.COMM.size = 0
+        self.SIZE=self.COMM.Get_size()
+        #self.COMM.rank = 0
+        self.RANK=self.COMM.Get_rank()
         self.allsecs=None #global list containing all NEURON sections, initialized via mkallsecs
         self.coordict=None
         self.celldict={}
@@ -104,12 +106,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         cil.remove(cil[0])#The first list element is the column titles.
         #inhibitory = map(lambda cil : cil if i[5]!="interneuron", i)
         cil = [i for i in cil if int(len(i))>9 ]
+        assert len(cil)!=0
         markram = [i for i in cil if "Markram" in i]
-        
-        #for m in markram:
-        #    execute_string='mv main/'+m[len(m)-2]+' swcfolder'
-        #    print execute_string
-        #    os.system(execute_string)        
+        return markram
+    def move_cells(self):
+        for m in markram:
+            execute_string='mv main/'+m[len(m)-2]+' swcfolder'
+            print execute_string
+            os.system(execute_string)        
         
     	return markram
     
@@ -117,6 +121,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         '''
         Make sure that the network is composed of 2/3 excitatory neurons 1/3 inhibitory neurons.
         '''
+        assert len(markram)!=0
         bothtrans=[]                                                                      
         bothtrans=[i for j,i in enumerate(markram) if "interneuron" in i if j<(self.NCELL/3)]
         bothtrans.extend([i for j,i in enumerate(markram) if not "interneuron" in i if j>=(self.NCELL/3)])        
@@ -126,8 +131,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         def wrapper(self):
             h=self.h    
             NCELL=self.NCELL
-            SIZE=self.SIZE
-            RANK=self.RANK
+            SIZE=self.COMM.size
+            RANK=self.COMM.rank
             pc=h.ParallelContext()            
             self.some_function()
         return wrapper
@@ -144,8 +149,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
   
         h=self.h    
         NCELL=self.NCELL
-        SIZE=self.SIZE
-        RANK=self.RANK
+        SIZE=self.COMM.size
+        RANK=self.COMM.rank
         pc=h.ParallelContext()
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
@@ -174,12 +179,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             else:                              
                 cell.basket()
                 cell.polarity=0           
-            #8 lines of trailing code is drawn from.
+            #8 lines of trailing code is sourced from.
             #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html        
             pc.set_gid2node(i,RANK)
             nc = cell.connect2target(None)
             pc.cell(i, nc) # Associate the cell with this host and gid
-            #### Record spikes of this cell
+            #Record spikes of this cell
             pc.spike_record(i, self.tvec, self.gidvec)        
             assert None!=pc.gid2cell(i)
             self.celldict[i]=cell
@@ -189,8 +194,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         """Instantiate NEURON cell Objects in the Python variable space such
         that all cells have unique identifiers."""
         NCELL=self.NCELL
-        SIZE=self.SIZE
-        RANK=self.RANK
+        SIZE=self.COMM.size
+        RANK=self.COMM.rank
         h=self.h    
         pc=h.ParallelContext()     
         h('objref nc, cells')
@@ -211,16 +216,16 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     
     def spike_gather(self):
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         self.global_spike=COMM.gather([self.tvec.to_python(),self.gidvec.to_python()], root=0)
 
     def cell_info_gather(self):
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
         self.global_namedict=COMM.gather(self.namedict, root=0)        
         if RANK==0:
@@ -234,9 +239,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         # types
         # TODO apply function decorator.
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         global_matrix = np.zeros_like(matrix)
         COMM.Reduce([matrix, MPI.DOUBLE], [global_matrix, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
@@ -249,9 +254,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h=self.h    
         pc=h.ParallelContext()
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         checkpoint_interval = 50000.
 
         #The following definition body is from the open source code at:
@@ -353,9 +358,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         Allocate a synaptic cleft from file.
         '''
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         h=self.h  
         pc=h.ParallelContext()
         polarity = 0        
@@ -390,9 +395,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         Allocate a synaptic cleft from exhaustive collision detection.
         '''
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         from neuron import h
         pc=h.ParallelContext()
         h=self.h
@@ -470,9 +475,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         """
         #from segment_distance import dist3D_segment_to_segment
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         from neuron import h
         pc=h.ParallelContext()
         h=self.h    
@@ -586,9 +591,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #from segment_distance import dist3D_segment_to_segment
         import pickle
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         h=self.h    
         pc=h.ParallelContext()
         secnames = ''
@@ -664,9 +669,9 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         '''
         ncsize=len(self.h.NetCon)
         NCELL=self.NCELL
-        SIZE=self.SIZE
+        SIZE=self.COMM.size
         COMM = self.COMM
-        RANK=self.RANK
+        RANK=self.COMM.rank
         self.matrix_reduce()
         lsoftup=[]
         for i, j in enumerate(self.h.NetCon):
