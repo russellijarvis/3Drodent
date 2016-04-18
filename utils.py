@@ -132,23 +132,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         bothtrans=[]                                                                      
         bothtrans=[i for j,i in enumerate(markram) if "interneuron" in i ]
         bothtrans=[i for j,i in enumerate(markram) if not "interneuron" in i if (j>=2*(len(bothtrans)/3.0))and(j<self.NCELL)]
-        #bothtrans.extend(excitatory)        
         return bothtrans
- 
-    def my_decorator(self,some_function):
-        def wrapper(self):
-            h=self.h    
-            NCELL=self.NCELL
-            SIZE=self.COMM.size
-            RANK=self.COMM.rank
-            pc=h.ParallelContext()            
-            self.some_function()
-        return wrapper
-    
-    #@my_decorator
-    #makecells()#I want to pass the function makecells as a function to the decorator.
-    #So, @my_decorator is just an easier way of saying just_some_function = my_decorator(just_some_function). 
-    #It's how you apply a decorator to a function
             
     def make_cells(self,polarity):
         #Distribute cells across the hosts in a
@@ -911,5 +895,20 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         if 'dg_basket' in d:
             x.set_neuron(nlex_id='nlx_cell_100201')
             pass
+        
+    def my_decorator(self,some_function):
+        def wrapper(self):
+            h=self.h    
+            NCELL=self.NCELL
+            SIZE=self.COMM.size
+            RANK=self.COMM.rank
+            pc=h.ParallelContext()            
+            self.some_function()
+        return wrapper
+    
+    #@my_decorator
+    #makecells()#I want to pass the function makecells as a function to the decorator.
+    #So, @my_decorator is just an easier way of saying just_some_function = my_decorator(just_some_function). 
+    #It's how you apply a decorator to a function
        
             
