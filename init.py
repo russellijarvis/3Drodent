@@ -36,15 +36,13 @@ else:
 utils.wirecells()#wire cells on different hosts.
 #utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them. 
 
-#reassign the rank of each processor and the size of the pool of available CPUs, to reflect the fact that rank0 is again free participating in local computations.
-#utils.RANK=MPI.COMM.Get_rank()
-#utils.SIZE=MPI.COMM.Get_size()
 utils.global_icm=utils.matrix_reduce(utils.icm)
 utils.global_ecm=utils.matrix_reduce(utils.ecm)
 utils.global_visited=utils.matrix_reduce(utils.visited)
+from rigp import NetStructure
+
 if utils.COMM.rank==0:
     utils.dumpjson_graph()
-    from rigp import NetStructure
 else:
     utils.h('forall{ for(x,0){ uninsert xtra}}')   #mechanism only needed for wiring cells not for simulating them.     
 
@@ -56,15 +54,19 @@ if utils.COMM.rank==0:
     #Inhibitory hub
     (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
     #Excitatory hub
+    ihubtuple=(outdegreei,indegreei)
     (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
-    amplitude=0.27 #pA or nA?
-    delay=60 # was 1020.0 ms, as this was long enough to notice unusual rebound spiking
-    duration=400.0 #was 750 ms, however this was much too long.
-    #Inhibitory hub
-    hubs.insert_cclamp(outdegreei,indegreei,amplitude,delay,duration)
-    #Excitatory hub
-    hubs.insert_cclamp(outdegree,indegree,amplitude,delay,duration)
-    hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
+    hubtuple=(outdegree,indegree)
+hubtuple = COMM.bcast(hubtuple, root=0)
+ihubtuple = COMM.bcast(ihubtuple, root=0)
+
+#check if these hubs are in the GID dictionary.
+
+#
+# This is a global gid, but I would need to bcast it to every host, 
+# and then check each host to see if that GID actually exists there.
+#
+
 hubs=NetStructure(utils,utils.ecm,utils.icm,utils.visited,utils.celldict)
 (outdegreei,indegreei)=hubs.hubs(utils.global_icm)    
 (outdegree,indegree)=hubs.hubs(utils.global_ecm)    
@@ -77,14 +79,18 @@ amplitude=0.27 #pA or nA?
 delay=200# was 1020.0 ms, as this was long enough to notice unusual rebound spiking
 duration=400.0 #was 750 ms, however this was much too long.
 hubs.insert_cclamp(hubs.outdegree,hubs.indegree,amplitude,delay,duration)
-vec = utils.record_values()
+if utils.COMM.rank!=0:
+    vec = utils.record_values()
 print 'setup recording'
 tstop = 1570
 utils.COMM.barrier()
 utils.prun(tstop)
+if utils.COMM.rank==0:
+    vec=[]
 utils.global_vec = utils.COMM.gather(vec,root=0) # Results in a list of dictionaries on rank 0 called utils.global_vec
 # Convert the list of dictionaries into one big dictionary called global_vec (type conversion).
 if utils.COMM.rank==0:
+    
     utils.global_vec = {key : value for dic in utils.global_vec for key,value in dic.iteritems()  } 
     import matplotlib 
     import matplotlib.pyplot as plt

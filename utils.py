@@ -37,8 +37,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         # reduce the number of side effects associated with functions in this code
         # by replacing a lot of instance attributes with local variables in methods.
         # This will reduce the size of the interface, and increase modularity/maintainability.
-        # The hocobject and its name space is designed in such a way that that modifying its state one function
-        # will always result in global side effects.
+        # The hoc Object and its name space is designed in such a way that that modifying its state/function
+        # will always result in side effects.
         h=self.h  
         h('objref pc, py')
         h('pc = new ParallelContext()')
@@ -96,8 +96,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     def prep_list(self):                    
         '''
-        find which list has the shortest length.
-        and construct a new list with 1 in 3 inhibitory neurons and 2 out of 3 excitatory neurons. 
+        Construct a new list with 1 in 3 inhibitory neurons and 2 out of 3 excitatory neurons. 
         It would be preferable to make an exhaustive list of all neurons
         however this is not practical for debugging small models, composed
         of a balance between excitation and inhibition.
@@ -108,8 +107,15 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         cil = [i for i in cil if int(len(i))>9 ]
         assert len(cil)!=0
         markram = [i for i in cil if "Markram" in i]
+        aspiny=[i for i in cil if not "interneuron" in i if not "pyramid" in i]
+        #stellate=[i for i in aspiny if "stellate" in i]
+        #basket=[i for i in cil if "basket" in i]
         return markram
-    def move_cells(self):
+    
+    def _move_cells(self):
+        '''
+        Not something that would typically be executed.
+        '''
         for m in markram:
             execute_string='mv main/'+m[len(m)-2]+' swcfolder'
             print execute_string
@@ -119,12 +125,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     
     def both_trans(self,markram):
         '''
+        A private method. Prepend _ to all private methods in this class, to be conventional.
         Make sure that the network is composed of 2/3 excitatory neurons 1/3 inhibitory neurons.
         '''
         assert len(markram)!=0
         bothtrans=[]                                                                      
-        bothtrans=[i for j,i in enumerate(markram) if "interneuron" in i if j<(self.NCELL/3)]
-        bothtrans.extend([i for j,i in enumerate(markram) if not "interneuron" in i if j>=(self.NCELL/3)])        
+        bothtrans=[i for j,i in enumerate(markram) if "interneuron" in i ]
+        bothtrans=[i for j,i in enumerate(markram) if not "interneuron" in i if (j>=2*(len(bothtrans)/3.0))and(j<self.NCELL)]
+        #bothtrans.extend(excitatory)        
         return bothtrans
  
     def my_decorator(self,some_function):
@@ -146,7 +154,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #Distribute cells across the hosts in a
         #Round robin distribution (circular dealing of cells)
         #https://en.wikipedia.org/wiki/Round-robin
-  
         h=self.h    
         NCELL=self.NCELL
         SIZE=self.COMM.size
@@ -644,13 +651,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 pickle.dump(self.visited,handle)
             self.destroy_isolated_cells()
         else:
-            #if COMM.rank!=0:               
-            fname='synapse_list'+str(RANK)+'.p'
-            with open(fname, 'rb') as handle:
-                self.synapse_list=pickle.load(handle)
-                #for s in self.synapse_list:
-                for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
-                    self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
+            if COMM.rank!=0:               
+                fname='synapse_list'+str(RANK)+'.p'
+                with open(fname, 'rb') as handle:
+                    self.synapse_list=pickle.load(handle)
+                    #for s in self.synapse_list:
+                    for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
+                        self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
             self.destroy_isolated_cells()
 
   
@@ -817,8 +824,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         for i, cell in enumerate(self.cells):
             vec["v"][int(cell.gid1)]=self.h.Vector()
             vec["v"][int(cell.gid1)].record(cell.soma[0](0.5)._ref_v)
-        vec["t"].record(self.h._ref_t)
-    
+        vec["t"].record(self.h._ref_t)    
         return vec
   
     def spikerecord(self):   
