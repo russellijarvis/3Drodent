@@ -24,6 +24,10 @@ import pickle
 import json
 import os
 
+#from numba import jit
+#from numpy import arange
+#@jit
+
 
 class Utils(HocUtils):#search multiple inheritance unittest.
     _log = logging.getLogger(__name__)
@@ -46,7 +50,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         setattr(self,'global_spike',tuple)
         self.tvec=h.Vector()
         self.gidvec=h.Vector()
-
+        self.has_cells=0
         #self.readin=readin
         #self.synapse_list=[]
         self.stim = None
@@ -91,86 +95,63 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     def prep_list(self):                    
         '''
         find which list has the shortest length.
-        and construct a new list with 1 in 3 inhibitory neurons and 2 out of 3 
-         excitatory neurons. 
+        and construct a new list with 1 in 3 inhibitory neurons and 2 out of 3 excitatory neurons. 
         It would be preferable to make an exhaustive list of all neurons
         however this is not practical for debugging small models, composed
         of a balance between excitation and inhibition.
         '''
         allrows = pickle.load(open('allrows.p', 'rb'))
-        allrows.remove(allrows[0])#The first list element are the column titles. 
+        allrows.remove(allrows[0])#The first list element is the column titles. 
         allrows = [i for i in allrows if int(len(i))>9 ]
-        excitatory = [i for i in allrows if i[5]!="interneuron" ]        
-        interneurons = [i for i in allrows if i[5]=="interneuron" ]     
-        bothtrans=[]
-        if len(excitatory) > len(interneurons):
-            length=len(interneurons)
-        else:
-            length=len(excitatory)
-        for i in xrange(0,length):
-            #Check to see how often index is divisible by 3.
-            if ((i%3)==0): #2/3 excitatory to reflect cortical balance of transmitters.
-                bothtrans.append(interneurons[i]) 
-            else:
-                bothtrans.append(excitatory[i])
+        markram = [i for i in allrows if "Markram" in i]        
+        return markram
+    
+    def both_trans(self,markram):
+        '''
+        Make sure that the network is composed of 2/3 excitatory neurons 1/3 inhibitory neurons.
+        '''
+        bothtrans=[]                                                                      
+        bothtrans=[i for j,i in enumerate(markram) if "interneuron" in i if j<(self.NCELL/3)]
+        bothtrans.extend([i for j,i in enumerate(markram) if not "interneuron" in i if j>=(self.NCELL/3)])        
         return bothtrans
-
-    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
-    #them in the network.
-    #Call a method test_cell inside the make_cells function.
-    def test_cell(self,d):#celltype='hip_pyr'):
-        from neuronunit.neuroelectro import NeuroElectroSummary
-        from neuronunit import neuroelectro
-        x = neuroelectro.NeuroElectroDataMap()
-        if 'hippocampus' in d:
-            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
-                                        ephysprop={'name':'spike width'})
-            observation = summary.get_observation(show=True)
-            #from neuronunit.tests import SpikeWidthTest
-            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
-            #Does not work due to problem with elephant.
-            #Note elephant requires pre-release version of neo.
-            pass
-        if 'neocortex' in d:
-  
-            x.set_neuron(nlex_id='sao2128417084')
-            #pass
-            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
-                                           # nucleus pyramidal neuron'.
-            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
-            #TODO find neurolex.org ID for Vm 
-            pass
-            #x.get_values() # Gets values for spike width from this paper. 
-            #pdb.set_trace() 
-            #width = x.val # Spike width reported in that paper. 
-        if 'basket' in d:
-            x.set_neuron(nlex_id='nifext_56')
-            pass
-        if 'dg_basket' in d:
-            x.set_neuron(nlex_id='nlx_cell_100201')
-            pass
-        
-                
+ 
+    def my_decorator(self,some_function):
+        def wrapper(self):
+            h=self.h    
+            NCELL=self.NCELL
+            SIZE=self.SIZE
+            RANK=self.RANK
+            pc=h.ParallelContext()            
+            self.some_function()
+        return wrapper
+    
+    #@my_decorator
+    #makecells()#I want to pass the function makecells as a function to the decorator.
+    #So, @my_decorator is just an easier way of saying just_some_function = my_decorator(just_some_function). 
+    #It's how you apply a decorator to a function
+            
     def make_cells(self,polarity):
+        #Distribute cells across the hosts in a
+        #Round robin distribution (circular dealing of cells)
+        #https://en.wikipedia.org/wiki/Round-robin
+  
         h=self.h    
         NCELL=self.NCELL
         SIZE=self.SIZE
         RANK=self.RANK
+        pc=h.ParallelContext()
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-        pc=h.ParallelContext()
         d = { x: y for x,y in enumerate(polarity)} 
-        itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )#iterate global identifiers.   
-        #Uncomment to make rank0 free of neurons.
-        #itergids = iter( (d[i][3],i) for i in range(RANK+1, NCELL, SIZE) )        
+        itergids = iter( (d[i][3],i) for i in range(RANK, NCELL, SIZE) )
         
         #TODO keep rank0 free of cells, such that all the memory associated with that CPU is free for graph theory related objects.
         #This would require an iterator such as the following.
-        
         fit_ids = self.description.data['fit_ids'][0] #excitatory         
                
         for (j,i) in itergids:
+            self.has_cells=1#RANK specific attribute simplifies later code.
             cell = h.mkcell(j)
             self.names_list[i]=j
             print cell, j,i 
@@ -180,40 +161,22 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             #excitatory neuron.
             self.test_cell(d[i])
             if 'pyramid' in d[i]:                
-                #self.load_cell_parameters(cell, fit_ids[self.cells_data[0]['type']])
                 cell.pyr()
                 cell.polarity=1                        
             #inhibitory neuron.
             else:                              
-                #self.load_cell_parameters(cell, fit_ids[self.cells_data[2]['type']])
                 cell.basket()
                 cell.polarity=0           
-      
-      
-            #cell.connect2target(None)
-            # Bug this only detected the spike on the first cell.
-            #cell.soma[0] nc =  new NetCon(&v(0.5), nil)')    
-
-            #h('Cell[0].soma[0] nc =  new NetCon(&v(0.5), nil)')    
-            #h('nc.threshold=-10')#-10mV spike detector threshold.                    
+            #8 lines of trailing code is drawn from.
+            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html        
             pc.set_gid2node(i,RANK)
-            
-            #http://neuron.yale.edu/neuron/static/docs/neuronpython/ballandstick5.html
-            #h('pc.cell('+str(i)+', nc)')
-            
             nc = cell.connect2target(None)
             pc.cell(i, nc) # Associate the cell with this host and gid
             #### Record spikes of this cell
-            pc.spike_record(i, self.tvec, self.gidvec)
-            #hocstring='pc.spike_record('+str(i)+',tvec,gidvec)'
-            #h(hocstring)
-        
+            pc.spike_record(i, self.tvec, self.gidvec)        
             assert None!=pc.gid2cell(i)
             self.celldict[i]=cell
             self.cells.append(cell)
-    
-    
-
     
     def gcs(self,NCELL):
         """Instantiate NEURON cell Objects in the Python variable space such
@@ -226,16 +189,12 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref nc, cells')
         swcdict={}
         NFILE = 3175
-        fit_ids = self.description.data['fit_ids'][0] #excitatory        
+        fit_ids = self.description.data['fit_ids'][0]        
         self.cells_data = self.description.data['biophys'][0]['cells']
-        bothtrans =self.prep_list()    
+        bothtrans=self.both_trans(self.prep_list())   
         self.names_list=[0 for x in xrange(0,len(bothtrans))]
-        os.chdir(os.getcwd() + '/main')  
+        os.chdir(os.getcwd() + '/main') 
         self.make_cells(bothtrans)
-        #ncsize=len(self.h.NetCon)
-
-        #assert ncsize != 0 #If there is no netcons associated with spike recording there may be no point in continuing.                        
-        pol=[ a.polarity for a in self.cells ]       
         os.chdir(os.getcwd() + '/../')               
         self.h.define_shape()        
         self.h('forall{ for(x,0){ insert xtra }}')
@@ -243,70 +202,43 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         self.h('xopen("interpxyz.hoc")')
         self.h('grindaway()')    
     
-    #def dreduce(self,list):
-    #    for i in list():
-    #        self.global_namedict.update(i)    
-
-    def spike_reduce(self):
-        self.global_spike=self.COMM.gather([self.tvec.to_python(),self.gidvec.to_python()], root=0)
-
-
-    def matrix_reduce(self, matrix=None):
-        '''
-        collapse many incomplete rank specific matrices into complete global matrices on rank0.
-        '''
-        # TODO make this method argument based so it can handle arbitary input matrices not a few different particular
-        # types
-        import networkx as nx
+    def spike_gather(self):
         NCELL=self.NCELL
         SIZE=self.SIZE
         COMM = self.COMM
         RANK=self.RANK
+        self.global_spike=COMM.gather([self.tvec.to_python(),self.gidvec.to_python()], root=0)
 
-        #dred = MPI.Op.Create(self.dreduce, commute=True)
-        #COMM.allreduce([self.namedict], op=dred)
-        #COMM.Reduce([self.namedict, MPI.DOUBLE], [self.namedict, MPI.DOUBLE], op=MPI.SUM,
-        #            root=0)                    
-        ##Argument matrix
-        if matrix!=None:
-            self.global_matrix = np.zeros_like(self.matrix)
-            COMM.Reduce([self.matrix, MPI.DOUBLE], [self.global_matrix, MPI.DOUBLE], op=MPI.SUM,
-                        root=0)
-        
-        #Create a local dictionary
+    def cell_info_gather(self):
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
         self.namedict= { key : (value.name, int(value.polarity)) for key,value in self.celldict.iteritems() }
-        
-        
         self.global_namedict=COMM.gather(self.namedict, root=0)        
         if RANK==0:
             self.global_namedict = {key : value for dic in self.global_namedict for key,value in dic.iteritems()  }
-        ##Standard matrices that will always need to be reduced.    
-
-        
-        
-        self.global_visited = np.zeros_like(self.visited)
-        COMM.Reduce([self.visited, MPI.DOUBLE], [self.global_visited, MPI.DOUBLE], op=MPI.SUM,
+    
+    def matrix_reduce(self, matrix=None):
+        '''
+        collapse many incomplete rank specific matrices into complete global matrices on rank0.
+        This function has side effects (it mutates object arguments, although it currently has no arguments, this will become clearer after refacttoring).
+        '''
+        # TODO make this method argument based so it can handle arbitary input matrices not a few different particular
+        # types
+        # TODO apply function decorator.
+        NCELL=self.NCELL
+        SIZE=self.SIZE
+        COMM = self.COMM
+        RANK=self.RANK
+        global_matrix = np.zeros_like(matrix)
+        COMM.Reduce([matrix, MPI.DOUBLE], [global_matrix, MPI.DOUBLE], op=MPI.SUM,
                     root=0)
-
-        self.global_icm = np.zeros_like(self.icm)
-        COMM.Reduce([self.icm, MPI.DOUBLE], [self.global_icm, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.global_ecm = np.zeros_like(self.ecm)
-        COMM.Reduce([self.ecm, MPI.DOUBLE], [self.global_ecm, MPI.DOUBLE], op=MPI.SUM,
-                    root=0)
-        self.global_icg = nx.DiGraph(self.global_icm)
-        self.global_ecg = nx.DiGraph(self.global_ecm)
-        if RANK==0:
-            assert np.sum(self.global_ecm)!=0
-        if RANK==0:
-            assert np.sum(self.global_icm)!=0
-        #TODO check if visited is empty.
-        if self.readin==0:
-            if RANK==0:
-                assert np.sum(self.global_visited)!=0
+        #if RANK==0:
+        #    assert np.sum(global_matrix)!=0
+        # The icm might be zero for example.
+        return global_matrix
         
-
-
     def prun(self,tstop):
         h=self.h    
         pc=h.ParallelContext()
@@ -428,7 +360,6 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             self.icg.add_edge(i,gidn,weight=r/0.4)
             assert np.sum(self.icm)!=0                
             #TODO Add other edge attributes like secnames etc.
-        #pdb.set_trace()
         print post_syn
         h('objref syn_')   
         h(post_syn)
@@ -446,7 +377,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
 
     def alloc_synapse(self,r,h,sec,seg,cellind,secnames,k,i,gidn):
         '''
-        Allocate a synaptic cleft
+        Allocate a synaptic cleft from exhuastive collision detection.
         '''
         NCELL=self.NCELL
         SIZE=self.SIZE
@@ -471,6 +402,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         
             else:
                 if (k['gid']%2==0):
+                    #TODO Find standard open source brain affiliated code for NMDA synapse
                     post_syn = secnames + ' ' + 'syn_ = new AmpaNmda(' + str(seg.x) + ')'                       
                     self.ecm[i][gidn] = self.ecm[i][gidn] + 1
                     self.ecg.add_edge(i,gidn,weight=r/0.4)
@@ -489,6 +421,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     assert np.sum(self.ecm)!=0
         
             h(post_syn)
+            print post_syn
             self.synapse_list.append((r,post_syn,cellind,k,gidn,i))
             syn_=h.syn_
             h.syn_.cid=i
@@ -547,6 +480,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
             def test_wiring(q,s,data):
                 '''
                 A test of to see if variables are updating properly.
+                The concatonation of section and segment iterables
+                will always yield a unique string, if and when the iteraterators update.
                 '''
                 if q+1<=len(s):
                     print len(s),' ',q,' ',q+1
@@ -556,7 +491,7 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                     print left, right 
                     assert left!=right
                          
-            #test_wiring(q,s,data)
+            test_wiring(q,s,data)
             for t in s:
                 k={} #The only point of this redundantvariable switching is to force the dictionary k to be redclared 
                 k=t #such that it is not prevented from updating
@@ -632,7 +567,8 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         pass
         #TODO hoc object level code that destroys the cell object.
         #    cell=pc.gid2cell(i)
-        #    h('py.cell = New List()')
+             
+        #    h('objref cell')
             
     def wirecells(self):
         """This function constitutes the outermost loop of the parallel wiring algor
@@ -659,9 +595,10 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         #identifiers, stored in the python dictionary).
         if self.readin!=1:    
             #for s in xrange(1, SIZE): #if rank==0, is free of neurons.
-            for s in xrange(0, SIZE):
-                print 's ', s, ' should start at 1 and increase.'
+            #print 's ', s, ' should start at 1 and increase.'
             
+            for s in xrange(0, SIZE):
+                
                 #Synchronise processes here, all ranks must have finished receiving 
                 #transmitted material before another transmission of the coordictlis begins, potentially
                 #overwritting a coordictlist before it has been properly exhausted.
@@ -692,14 +629,14 @@ class Utils(HocUtils):#search multiple inheritance unittest.
                 pickle.dump(self.visited,handle)
             self.destroy_isolated_cells()
         else:
-            if COMM.rank!=0:               
-                fname='synapse_list'+str(RANK)+'.p'
-                with open(fname, 'rb') as handle:
-                    self.synapse_list=pickle.load(handle)
-                    #for s in self.synapse_list:
-                    for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
-                        self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
-                self.destroy_isolated_cells()
+            #if COMM.rank!=0:               
+            fname='synapse_list'+str(RANK)+'.p'
+            with open(fname, 'rb') as handle:
+                self.synapse_list=pickle.load(handle)
+                #for s in self.synapse_list:
+                for (r,post_syn,cellind,k,gidn,i) in self.synapse_list:
+                    self.alloc_synapse_ff(r,post_syn,cellind,k,gidn,i)
+            self.destroy_isolated_cells()
 
   
     def tracenet(self):
@@ -732,52 +669,62 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         return lsoftup
       
         
-    def dumpjsongraph(utils,tvec,gidvec):
+    def dumpjson_graph(self):
+        assert self.COMM.rank==0        
+        import json
+        import networkx as nx
+        from networkx.readwrite import json_graph
+        h=self.h
+        #import pickle
+        #json_graph.node_link_graph
+        #Create a whole network of both transmitter types.
+        self.global_whole_net=nx.compose(self.global_ecg, self.global_icg)
+        self.global_whole_net.remove_nodes_from(nx.isolates(self.global_whole_net))
+        self.global_icg.remove_nodes_from(nx.isolates(self.global_icg))
+        self.global_ecg.remove_nodes_from(nx.isolates(self.global_ecg))
+        
+        d =[]
+        whole=nx.to_numpy_matrix(self.global_whole_net)  
+        #TODO sort whole (network) here in Python, as Python is arguably easier to understand than JS. 
+        d.append(whole.tolist()) 
+        #d.append(self.global_whole_net.tolist())
+        #d.append(json_graph.node_link_data(self.global_whole_net))                 
+        d.append(self.global_namedict)
+        json.dump(d, open('web/js/global_whole_network.json','w'))
+        d=json.load(open('web/js/global_whole_network.json','r'))
+        #read the object just to prove that is readable.
+        d=None #destroy the object.    
+        print('Wrote JSON data to web/js/network.json')
+    
+        print('Wrote node-link JSON data to web/js/network.json')
+        # open URL in running web browser
+        #http_server.load_url('force/force.html')
+
+    def dumpjson_spike(self,tvec,gidvec):
         assert utils.COMM.rank==0        
         import json
         import networkx as nx
         from networkx.readwrite import json_graph
-        h=utils.h
-        import pickle
-        #json_graph.node_link_graph
-        #Create a whole network of both transmitter types.
-        utils.global_whole_net=nx.compose(utils.global_ecg, utils.global_icg)
-        
-        utils.global_whole_net.remove_nodes_from(nx.isolates(utils.global_whole_net))
-        utils.global_icg.remove_nodes_from(nx.isolates(utils.global_icg))
-        utils.global_ecg.remove_nodes_from(nx.isolates(utils.global_ecg))
-        
+        h=utils.h    
         d =[]
-        d.append(utils.global_ecm.tolist())     
-        d.append(utils.global_icm.tolist())  
-        whole=nx.to_numpy_matrix(utils.global_whole_net)  
-        d.append(whole.tolist()) 
-        d.append(utils.global_whole_net.tolist())
-        d.append(json_graph.node_link_data(utils.global_whole_net))                 
-        d.append(json_graph.node_link_data(utils.global_whole_net))#, directed, multigraph, attrs)
-        d.append(json_graph.node_link_data(utils.global_ecg))     
-        d.append(json_graph.node_link_data(utils.global_icg))     
-        d.append(utils.global_namedict)
-        if type(tvec)!=type(utils.h):
-            if type(gidvec)!=type(utils.h):
-                d.append(tvec)
-                d.append(gidvec)
+        d.append(self.global_namedict)
+        assert (type(tvec)!=type(utils.h) and type(gidvec)!=type(utils.h))
+        d.append(tvec)
+        d.append(gidvec)
+        json.dump(d, open('web/js/spike.json','w'))
+        d=json.load(open('web/js/spike.json','r'))
+        #read the object just to prove that is readable.
+        d=None #explicitly destroy the object, as garbage collection would do anyway.   
+        print('Wrote JSON data to web/js/network.json')
     
-        json.dump(d, open('web/js/global_whole_network.json','w'))
-        d=json.load(open('web/js/global_whole_network.json','r'))
-    #    pickle.dump(d,open('list_of_pickle.p'),'w')
-    
-        print('Wrote node-link JSON data to web/js/network.json')
-    dumpjsongraph(utils,tvec,gidvec)
-        # open URL in running web browser
-        #http_server.load_url('force/force.html')
-
-
-        
+   
 
     def generate_morphology(self, cell, morph_filename):
-        #This code is from the Allen Brain API examples.
-
+        '''
+        This code is from the Allen Brain API examples.
+        This code is no longer executed.
+        morph4.hoc is executed instead.
+        '''
         h = self.h
         swc = self.h.Import3d_SWC_read()
         swc.input(morph_filename)
@@ -803,6 +750,13 @@ class Utils(HocUtils):#search multiple inheritance unittest.
     
     def load_cell_parameters(self, cell, type_index):
         #This code is from the Allen Brain API examples.
+        '''
+        This code is from the Allen Brain API examples.
+        This code is no longer executed.
+        morph4.hoc is executed instead.
+        It is just good py-hoc example code.
+        '''
+
         h=self.h
         passive = self.description.data['fit'][type_index]['passive'][0]
         conditions = self.description.data['fit'][type_index]['conditions'][0]
@@ -859,9 +813,82 @@ class Utils(HocUtils):#search multiple inheritance unittest.
         h('objref tvec, gidvec')
         h('gidvec = new Vector()')
         h('tvec = new Vector()')
-
         for cell in self.cells:
             self.h.pc.spike_record(int(cell.gid1), self.h.tvec, self.h.idvec)
 
 
+    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
+    #them in the network.
+    #Call a method test_cell inside the make_cells function.
+    def test_cell(self,d):#celltype='hip_pyr'):
+        from neuronunit.neuroelectro import NeuroElectroSummary
+        from neuronunit import neuroelectro
+        x = neuroelectro.NeuroElectroDataMap()
+        if 'hippocampus' in d:
+            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
+                                        ephysprop={'name':'spike width'})
+            observation = summary.get_observation(show=True)
+            #from neuronunit.tests import SpikeWidthTest
+            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+            #Does not work due to problem with elephant.
+            #Note elephant requires pre-release version of neo.
+            pass
+        if 'neocortex' in d:
+  
+            x.set_neuron(nlex_id='sao2128417084')
+            #pass
+            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                           # nucleus pyramidal neuron'.
+            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+            #TODO find neurolex.org ID for Vm
+ 
+            pass
+            #x.get_values() # Gets values for spike width from this paper. 
+            #pdb.set_trace() 
+            #width = x.val # Spike width reported in that paper. 
+        if 'basket' in d:
+            x.set_neuron(nlex_id='nifext_56')
+            pass
+        if 'dg_basket' in d:
+            x.set_neuron(nlex_id='nlx_cell_100201')
+            pass
+        
+        
+        
 
+    #TODO use neuro electro to test cortical pyramidal cells, and baskett cells before including
+    #them in the network.
+    #Call a method test_cell inside the make_cells function.
+    def test_cell(self,d):#celltype='hip_pyr'):
+        from neuronunit.neuroelectro import NeuroElectroSummary
+        from neuronunit import neuroelectro
+        x = neuroelectro.NeuroElectroDataMap()
+        if 'hippocampus' in d:
+            summary = NeuroElectroSummary(neuron={'name':'Hippocampus CA1 Pyramidal Cell'},
+                                        ephysprop={'name':'spike width'})
+            observation = summary.get_observation(show=True)
+            #from neuronunit.tests import SpikeWidthTest
+            #ca1_pyramdical_spike_width_test=SPikeWidthTest(observation=observation)
+            #Does not work due to problem with elephant.
+            #Note elephant requires pre-release version of neo.
+            pass
+        if 'neocortex' in d:
+  
+            x.set_neuron(nlex_id='sao2128417084')
+            #pass
+            #x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                           # nucleus pyramidal neuron'.
+            x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+            #TODO find neurolex.org ID for Vm 
+            pass
+            #x.get_values() # Gets values for spike width from this paper. 
+            #pdb.set_trace() 
+            #width = x.val # Spike width reported in that paper. 
+        if 'basket' in d:
+            x.set_neuron(nlex_id='nifext_56')
+            pass
+        if 'dg_basket' in d:
+            x.set_neuron(nlex_id='nlx_cell_100201')
+            pass
+       
+            
