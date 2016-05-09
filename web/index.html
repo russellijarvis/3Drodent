@@ -48,7 +48,7 @@ var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box tha
 
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
-  console.log(data)
+  //console.log(data)
 	/*
     Written by Dulini Mendis
     https://github.com/DuliniMendis/RodentTest/blob/gh-pages/index.html
@@ -60,7 +60,9 @@ d3.json('js/global_whole_network.json', function(error, data){
     //console.log(matrix);
     var neurons = Object.keys(data[1]).map(function(key){ return data[1][key] }); //object with filenames and whether its excitatory or inhibitory    
     //Get excitatory and inhibitory neurons indices separately
-    var neuronType = neurons.map(function(a) {return a[1];});    
+    console.log(neurons)
+    var neuronType = neurons.map(function(a) {return a[1];}); 
+    console.log(neuronType)   
     var neuronInds = neuronType.map(function(a,i){ if(a==0 && i<matrix.length){ return i;} else return null; });//Get the inhibitory neuron types
     var inNeuronInds = neuronInds.filter(function(a){return a!=null;}); //remove nulls from the array.
     var neuronInds = neuronType.map(function(a,i){ if(a==1 && i<matrix.length){ return i;} else return null; });//Get the excitatory neuron types
