@@ -29,11 +29,11 @@ body {
 
 <body>  
   
-  <div>
     
 <script src="//d3js.org/d3.v3.min.js"></script>
 
-  <!--<script type="text/javascript" src="d3.v3.min.js"></script>  --> 
+<div>
+  <!-- <div> <script type="text/javascript" src="d3.v3.min.js"></script>  --> 
 <script>
 
 
@@ -48,6 +48,7 @@ var tooltip = d3.select("#tooltip");//The Tooltip plugin is small pop-up box tha
 
 d3.json('js/global_whole_network.json', function(error, data){
   if (error) throw error;
+  console.log(data)
 	/*
     Written by Dulini Mendis
     https://github.com/DuliniMendis/RodentTest/blob/gh-pages/index.html
